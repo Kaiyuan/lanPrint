@@ -31,11 +31,8 @@ builds:
 
 archives:
   - format: zip
-    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
-    replacements:
-      darwin: Mac
-      linux: Linux
-      windows: Windows
+    name_template: >-
+      {{ .ProjectName }}_{{ if eq .Os "darwin" }}Mac{{ else }}{{ title .Os }}{{ end }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}
     files:
       - LICENSE*
       - README*
