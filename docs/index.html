@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>lanPrint - 跨平台打印网关 | Cross-platform Printing Gateway</title>
+    <style>
+        :root {
+            --primary: #8b5cf6;
+            --primary-hover: #7c3aed;
+            --bg: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #22d3ee;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, system-ui, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        header {
+            padding: 40px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .lang-switcher {
+            display: flex;
+            gap: 10px;
+        }
+
+        .lang-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-muted);
+            padding: 4px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .lang-btn.active {
+            color: var(--text);
+            border-color: var(--accent);
+            background: rgba(34, 211, 238, 0.1);
+        }
+
+        .hero {
+            padding: 100px 0;
+            text-align: center;
+            position: relative;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, transparent 70%);
+            z-index: -1;
+        }
+
+        h1 {
+            font-size: 64px;
+            font-weight: 900;
+            margin-bottom: 24px;
+            letter-spacing: -2px;
+        }
+
+        .hero p {
+            font-size: 20px;
+            color: var(--text-muted);
+            max-width: 700px;
+            margin: 0 auto 40px;
+        }
+
+        .cta-group {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+            box-shadow: 0 10px 15px -3px rgba(139, 92, 246, 0.3);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-2px);
+        }
+
+        .btn-outline {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .btn-outline:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .features {
+            padding: 80px 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+        }
+
+        .feature-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            border-radius: 24px;
+            transition: transform 0.3s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-8px);
+        }
+
+        .feature-card h3 {
+            font-size: 22px;
+            margin-bottom: 12px;
+        }
+
+        .feature-card p {
+            color: var(--text-muted);
+        }
+
+        footer {
+            padding: 80px 0 40px;
+            text-align: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 40px;
+            }
+
+            .hero {
+                padding: 60px 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div class="logo"><img src="./images/lanprint-icon.png" alt="lanPrint" width="50" height="50"></div>
+            <div class="lang-switcher">
+                <div class="lang-btn" data-lang="en">EN</div>
+                <div class="lang-btn active" data-lang="zh-CN">简</div>
+                <div class="lang-btn" data-lang="zh-TW">繁</div>
+                <div class="lang-btn" data-lang="ja">JP</div>
+                <div class="lang-btn" data-lang="ko">KR</div>
+            </div>
+            <nav>
+                <a href="https://github.com/kaiyuan/lanPrint" style="color: #fff;"><svg data-component="Octicon"
+                        aria-hidden="true" focusable="false" class="octicon octicon-mark-github" viewBox="0 0 24 24"
+                        width="32" height="32" fill="currentColor" display="inline-block" overflow="visible"
+                        style="vertical-align:text-bottom">
+                        <path
+                            d="M10.226 17.284c-2.965-.36-5.054-2.493-5.054-5.256 0-1.123.404-2.336 1.078-3.144-.292-.741-.247-2.314.09-2.965.898-.112 2.111.36 2.83 1.01.853-.269 1.752-.404 2.853-.404 1.1 0 1.999.135 2.807.382.696-.629 1.932-1.1 2.83-.988.315.606.36 2.179.067 2.942.72.854 1.101 2 1.101 3.167 0 2.763-2.089 4.852-5.098 5.234.763.494 1.28 1.572 1.28 2.807v2.336c0 .674.561 1.056 1.235.786 4.066-1.55 7.255-5.615 7.255-10.646C23.5 6.188 18.334 1 11.978 1 5.62 1 .5 6.188.5 12.545c0 4.986 3.167 9.12 7.435 10.669.606.225 1.19-.18 1.19-.786V20.63a2.9 2.9 0 0 1-1.078.224c-1.483 0-2.359-.808-2.987-2.313-.247-.607-.517-.966-1.034-1.033-.27-.023-.359-.135-.359-.27 0-.27.45-.471.898-.471.652 0 1.213.404 1.797 1.235.45.651.921.943 1.483.943.561 0 .92-.202 1.437-.719.382-.381.674-.718.944-.943">
+                        </path>
+                    </svg></a>
+            </nav>
+        </header>
+
+        <section class="hero">
+            <h1 id="hero-title">让打印无界，<br>触手可及。</h1>
+            <p id="hero-desc">lanPrint 是一款极简的跨平台打印网关。无论你在办公室还是在家中，只需一键共享，即可将本地打印机转化为全局可用的智能设备。</p>
+            <p><img src="./images/lanprint-icon.png" alt="lanPrint" style="max-width: 300px; max-height: 300px;"></p>
+            <div class="cta-group">
+                <a href="https://github.com/kaiyuan/lanPrint/releases" class="btn btn-primary"
+                    id="btn-download">立即下载</a>
+                <a href="https://github.com/kaiyuan/lanPrint#README" class="btn btn-outline" id="btn-docs">查看文档</a>
+            </div>
+        </section>
+
+        <section class="features">
+            <div class="feature-card">
+                <h3 id="f1-title">🚀 极致轻量</h3>
+                <p id="f1-desc">采用 Go 语言开发，单文件运行，不产生垃圾，不占用系统资源。一键安装为系统服务。</p>
+            </div>
+            <div class="feature-card">
+                <h3 id="f2-title">🖥️ 全平台适配</h3>
+                <p id="f2-desc">深度适配 Windows 7-11, macOS 和主流 Linux 发行版。支持所有主流打印机型号。</p>
+            </div>
+            <div class="feature-card">
+                <h3 id="f3-title">🔒 安全共享</h3>
+                <p id="f3-desc">内置 SHA256 密码验证，支持细粒度的权限控制。即使在公网环境下也能放心使用。</p>
+            </div>
+            <div class="feature-card">
+                <h3 id="f4-title">🎨 零依赖打印</h3>
+                <p id="f4-desc">独有的“原生降级”技术，在 Windows 上无需安装任何 PDF 阅读器即可完成高质量打印。</p>
+            </div>
+        </section>
+
+        <footer id="footer">
+            &copy; 2026 lanPrint Project. Powered by Antigravity.
+        </footer>
+    </div>
+
+    <script>
+        const i18n = {
+            'en': {
+                'hero-title': 'Printing without limits, <br>at your fingertips.',
+                'hero-desc': 'lanPrint is a minimalist cross-platform printing gateway. Share your local printer with one click and turn it into a globally accessible smart device.',
+                'btn-download': 'Download Now',
+                'btn-docs': 'View Docs',
+                'f1-title': '🚀 Ultra Lightweight',
+                'f1-desc': 'Developed in Go, single file execution, no junk, no system resource hogging. One-click installation as a system service.',
+                'f2-title': '🖥️ Multi-Platform',
+                'f2-desc': 'Deeply compatible with Windows 7-11, macOS, and major Linux distributions. Supports all major printer models.',
+                'f3-title': '🔒 Secure Sharing',
+                'f3-desc': 'Built-in SHA256 password verification, supports granular permission control. Safe to use even in public network environments.',
+                'f4-title': '🎨 Zero Dependency',
+                'f4-desc': 'Unique "native fallback" technology. Print high-quality documents on Windows without any PDF reader installed.',
+            },
+            'zh-CN': {
+                'hero-title': '让打印无界，<br>触手可及。',
+                'hero-desc': 'lanPrint 是一款极简的跨平台打印网关。无论你在办公室还是在家中，只需一键共享，即可将本地打印机转化为全局可用的智能设备。',
+                'btn-download': '立即下载',
+                'btn-docs': '查看文档',
+                'f1-title': '🚀 极致轻量',
+                'f1-desc': '采用 Go 语言开发，单文件运行，不产生垃圾，不占用系统资源。一键安装为系统服务。',
+                'f2-title': '🖥️ 全平台适配',
+                'f2-desc': '深度适配 Windows 7-11, macOS 和主流 Linux 发行版。支持所有主流打印机型号。',
+                'f3-title': '🔒 安全共享',
+                'f3-desc': '内置 SHA256 密码验证，支持细粒度的权限控制。即使在公网环境下也能放心使用。',
+                'f4-title': '🎨 零依赖打印',
+                'f4-desc': '独有的“原生降级”技术，在 Windows 上无需安装任何 PDF 阅读器即可完成高质量打印。',
+            },
+            'zh-TW': {
+                'hero-title': '讓列印無界，<br>觸手可及。',
+                'hero-desc': 'lanPrint 是一款極簡的跨平台列印網關。無論你在辦公室還是在家中，只需一键共享，即可將本地印表機轉化為全局可用的智能裝置。',
+                'btn-download': '立即下載',
+                'btn-docs': '查看文件',
+                'f1-title': '🚀 極致轻量',
+                'f1-desc': '採用 Go 語言開發，單檔案執行，不產生垃圾，不佔用系統資源。一键安裝為系統服務。',
+                'f2-title': '🖥️ 全平台適配',
+                'f2-desc': '深度適配 Windows 7-11, macOS 和主流 Linux 發行版。支援所有主流印表機型號。',
+                'f3-title': '🔒 安全共享',
+                'f3-desc': '內置 SHA256 密碼驗證，支援細粒度的權限控制。即使在公網環境下也能放心使用。',
+                'f4-title': '🎨 零依賴列印',
+                'f4-desc': '獨有的「原生降級」技術，在 Windows 上無需安裝任何 PDF 閱讀器即可完成高品質列印。',
+            },
+            'ja': {
+                'hero-title': '印刷を自由に、<br>指先ひとつで。',
+                'hero-desc': 'lanPrint は、ミニマリストなクロスプラットフォーム印刷ゲートウェイです。ワンクリックでローカルプリンターを共有し、世界中からアクセス可能なスマートデバイスに変えましょう。',
+                'btn-download': '今すぐダウンロード',
+                'btn-docs': 'ドキュメント',
+                'f1-title': '🚀 超軽量',
+                'f1-desc': 'Go 言語で開発され、単一ファイルで実行可能。システムリソースを消費せず、ワンクリックでサービスとしてインストールできます。',
+                'f2-title': '🖥️ マルチプラットフォーム',
+                'f2-desc': 'Windows 7-11、macOS、主要な Linux ディストリビューションに深く対応。すべての主要なプリンターモデルをサポート。',
+                'f3-title': '🔒 安全な共有',
+                'f3-desc': 'SHA256 パスワード認証を内蔵し、きめ細かな権限管理をサポート。パブリックネットワーク環境でも安心して使用できます。',
+                'f4-title': '🎨 ゼロ依存印刷',
+                'f4-desc': '独自の「ネイティブフォールバック」技術。Windows で PDF リーダーをインストールせずに高品質な印刷が可能です。',
+            },
+            'ko': {
+                'hero-title': '출력의 경계를 허물다, <br>손끝에서 시작되는 자유.',
+                'hero-desc': 'lanPrint는 미니멀한 크로스 플랫폼 프린팅 게이트웨이입니다. 클릭 한 번으로 로컬 프린터를 공유하여 전 세계 어디서나 접근 가능한 스마트 장치로 변신시키세요.',
+                'btn-download': '지금 다운로드',
+                'btn-docs': '문서 보기',
+                'f1-title': '🚀 초경량 설계',
+                'f1-desc': 'Go 언어로 개발되어 단일 파일로 실행되며, 시스템 리소스를 거의 차지하지 않습니다. 클릭 한 번으로 서비스 설치가 가능합니다.',
+                'f2-title': '🖥️ 모든 플랫폼 지원',
+                'f2-desc': 'Windows 7-11, macOS 및 주요 Linux 배포판을 완벽하게 지원합니다. 모든 주요 프린터 모델과 호환됩니다.',
+                'f3-title': '🔒 안전한 공유',
+                'f3-desc': 'SHA256 암호 인증이 내장되어 있으며 상세한 권한 제어를 지원합니다. 공용 네트워크 환경에서도 안심하고 사용하세요.',
+                'f4-title': '🎨 의존성 없는 출력',
+                'f4-desc': '독자적인 "네이티브 폴백" 기술로, Windows에서 PDF 뷰어 없이도 고품질 출력이 가능합니다.',
+            }
+        };
+
+        document.querySelectorAll('.lang-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const lang = btn.getAttribute('data-lang');
+                setLang(lang);
+            });
+        });
+
+        function setLang(lang) {
+            document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector(`[data-lang="${lang}"]`).classList.add('active');
+
+            const data = i18n[lang];
+            for (const key in data) {
+                const el = document.getElementById(key);
+                if (el) el.innerHTML = data[key];
+            }
+        }
+    </script>
+</body>
+
+</html>

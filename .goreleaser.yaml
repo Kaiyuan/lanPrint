@@ -1,0 +1,55 @@
+# .goreleaser.yaml
+version: 2
+project_name: lanPrint
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: lanPrint
+    main: ./cmd/lanPrint
+    binary: lanPrint
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - windows
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+      - arm
+    goarm:
+      - 7
+    ignore:
+      - goos: darwin
+        goarch: arm
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
+      - "{{ if eq .Os \"windows\" }}-H=windowsgui{{ end }}"
+
+archives:
+  - format: zip
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+    files:
+      - LICENSE*
+      - README*
+
+checksum:
+  name_template: "checksums.txt"
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+
+release:
+  github:
+    owner: kaiyuan
+    name: lanPrint
