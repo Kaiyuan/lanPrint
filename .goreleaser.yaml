@@ -53,3 +53,20 @@ release:
   github:
     owner: kaiyuan
     name: lanPrint
+
+nfpms:
+  - id: lanPrint
+    package_name: lanprint
+    vendor: lanPrint
+    homepage: https://github.com/kaiyuan/lanPrint
+    maintainer: kaiyuan <kaiyuan@boxks.com>
+    description: Cross-platform printing gateway
+    license: MIT
+    formats:
+      - deb
+    bindir: /usr/bin
+    contents:
+      - src: LICENSE
+        dst: /usr/share/doc/lanprint/copyright
+      - src: README.md
+        dst: /usr/share/doc/lanprint/README.md
