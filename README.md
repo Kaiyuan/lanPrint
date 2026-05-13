@@ -1,3 +1,4 @@
+![lanPrint](https://github.com/Kaiyuan/lanPrint/blob/main/web/static/images/lanprint-icon.png?raw=true)
 # lanPrint
 
 **lanPrint** 是一款轻量、强大的跨平台打印网关，旨在将任意本地打印机转换为可通过网络访问的智能打印机。它完全抛弃了传统的、复杂的 IPP/WSD 协议，自主实现了一套基于 HTTP 的高效传输与虚拟打印机劫持机制，支持 Windows、macOS 和 Linux。

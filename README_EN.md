@@ -1,3 +1,4 @@
+![lanPrint](https://github.com/Kaiyuan/lanPrint/blob/main/web/static/images/lanprint-icon.png?raw=true)
 # lanPrint
 
 **lanPrint** is a lightweight, powerful cross-platform printing gateway designed to convert any local printer into a smart printer accessible via network. It completely bypasses traditional, complex protocols like IPP/WSD, implementing a custom high-efficiency HTTP-based transmission and virtual printer hijacking mechanism. It supports Windows, macOS, and Linux.
