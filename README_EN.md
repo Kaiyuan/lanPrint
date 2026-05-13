@@ -22,7 +22,19 @@ lanPrint uses a custom "Local Hijack -> HTTP Forward -> Remote Execution" archit
 
 ## 📥 Installation & Usage
 
-### Quick Start
+### One-Click Installation
+
+**Linux & macOS:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/kaiyuan/lanPrint/main/scripts/install.sh | bash
+```
+
+**Windows (PowerShell):**
+```powershell
+iwr -useb https://raw.githubusercontent.com/kaiyuan/lanPrint/main/scripts/install.ps1 | iex
+```
+
+### Manual Download
 Download the binary for your platform from the [Releases](https://github.com/kaiyuan/lanPrint/releases) page.
 
 **Windows:**
