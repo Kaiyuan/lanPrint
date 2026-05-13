@@ -31,7 +31,10 @@ builds:
       - goos: linux
         goarch: arm
         env:
-          - CC=arm-linux-gnueabihf-gcc
+          - CGO_ENABLED=0
+      - goos: darwin
+        env:
+          - CGO_ENABLED=0
     ignore:
       - goos: darwin
         goarch: arm
