@@ -12,6 +12,7 @@ builds:
     binary: lanPrint
     env:
       - CGO_ENABLED=1
+      - CGO_CFLAGS=-Wno-deprecated-declarations
     goos:
       - windows
       - linux
@@ -76,6 +77,10 @@ nfpms:
       - deb
     bindir: /usr/bin
     contents:
+      - src: packaging/linux/lanprint.desktop
+        dst: /usr/share/applications/lanprint.desktop
+      - src: web/static/images/lanprint-icon.png
+        dst: /usr/share/icons/hicolor/128x128/apps/lanprint.png
       - src: LICENSE
         dst: /usr/share/doc/lanprint/copyright
       - src: README.md

@@ -64,11 +64,11 @@ go build -ldflags "-s -w -X main.version=v1.0.0 -H=windowsgui" -o lanPrint.exe .
 
 **Linux (Ubuntu/UOS/Deepin):**
 ```bash
-# Install dependencies
-sudo apt-get install -y libappindicator3-dev libgtk-3-dev
+# Install dependencies (libayatana is recommended for UOS/Deepin)
+sudo apt-get install -y libayatana-appindicator3-dev libgtk-3-dev
 
-# Enable CGO for tray support
-CGO_ENABLED=1 go build -ldflags "-s -w -X main.version=v1.0.0" -o lanPrint ./cmd/lanPrint
+# Enable CGO and ignore deprecated API warnings
+CGO_ENABLED=1 CGO_CFLAGS="-Wno-deprecated-declarations" go build -ldflags "-s -w -X main.version=v1.0.0" -o lanPrint ./cmd/lanPrint
 ```
 
 **macOS:**

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=lanPrint
+Comment=Lightweight cross-platform printing gateway
+Exec=/usr/bin/lanPrint
+Icon=lanprint
+Terminal=false
+Categories=Utility;
+StartupNotify=true

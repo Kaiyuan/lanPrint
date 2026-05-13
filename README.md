@@ -64,11 +64,11 @@ go build -ldflags "-s -w -X main.version=v1.0.0 -H=windowsgui" -o lanPrint.exe .
 
 **Linux (Ubuntu/UOS/Deepin):**
 ```bash
-# 安装依赖
-sudo apt-get install -y libappindicator3-dev libgtk-3-dev
+# 安装依赖 (UOS/Deepin 推荐使用 libayatana)
+sudo apt-get install -y libayatana-appindicator3-dev libgtk-3-dev
 
-# 启用 CGO 编译以支持托盘
-CGO_ENABLED=1 go build -ldflags "-s -w -X main.version=v1.0.0" -o lanPrint ./cmd/lanPrint
+# 启用 CGO 编译，并忽略过时 API 警告
+CGO_ENABLED=1 CGO_CFLAGS="-Wno-deprecated-declarations" go build -ldflags "-s -w -X main.version=v1.0.0" -o lanPrint ./cmd/lanPrint
 ```
 
 **macOS:**

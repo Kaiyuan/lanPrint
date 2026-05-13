@@ -5,7 +5,7 @@ package tray
 import (
 	"io/fs"
 
-	"github.com/getlantern/systray"
+	"fyne.io/systray"
 	"github.com/kaiyuan/lanPrint/internal/startup"
 	webassets "github.com/kaiyuan/lanPrint/web"
 )
