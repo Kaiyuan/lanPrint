@@ -61,6 +61,7 @@ if ($p) {
     $props | ConvertTo-Json -Compress
 }`, name, name)
 	cmd := exec.Command("powershell", "-NoProfile", "-NonInteractive", "-Command", script)
+	procutil.HideWindow(cmd)
 	out, err := cmd.Output()
 	if err == nil && len(out) > 0 {
 		var result map[string]interface{}
@@ -86,6 +87,7 @@ $caps2 = $q.GetPrintCapabilities()
 ($caps2.PageMediaSizeCapability | Select-Object -ExpandProperty PageMediaSizeName) -join ','
 `, name)
 	cmd2 := exec.Command("powershell", "-NoProfile", "-NonInteractive", "-Command", script2)
+	procutil.HideWindow(cmd2)
 	if out2, err2 := cmd2.Output(); err2 == nil {
 		sizes := strings.Split(strings.TrimSpace(string(out2)), ",")
 		for _, s := range sizes {

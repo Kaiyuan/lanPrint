@@ -27,5 +27,6 @@
   "update_latest": "최신 버전을 사용 중입니다.",
   "update_available": "새 버전 발견: ",
   "update_failed": "업데이트 확인 실패.",
-  "update_confirm": "이(가) 출시되었습니다. 다운로드 페이지를 여시겠습니까?"
+  "update_confirm": "이(가) 출시되었습니다. 다운로드 페이지를 여시겠습니까?",
+  "update_now": "지금 업데이트"
 }

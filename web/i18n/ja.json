@@ -27,5 +27,6 @@
   "update_latest": "最新バージョンを使用しています。",
   "update_available": "新バージョンが見つかりました：",
   "update_failed": "アップデートの確認に失敗しました。",
-  "update_confirm": "がリリースされました。ダウンロードページを開きますか？"
+  "update_confirm": "がリリースされました。ダウンロードページを開きますか？",
+  "update_now": "今すぐ更新"
 }

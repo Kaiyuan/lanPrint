@@ -9,6 +9,13 @@
 </head>
 
 <body>
+  <header class="mobile-header">
+    <div class="mobile-logo">lanPrint</div>
+    <button id="menu-toggle" class="menu-btn">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+    </button>
+  </header>
+
   <div class="app-container">
     <aside class="sidebar">
       <div class="logo">
@@ -25,12 +32,17 @@
           <li data-page="settings"><span data-i18n="nav_settings">Settings</span></li>
         </ul>
       </nav>
-      <div class="sidebar-footer" style="display: flex; align-items: center; justify-content: space-between; padding: 0 16px;">
-        <a href="https://github.com/kaiyuan/lanPrint" target="_blank" style="color: var(--text-muted); text-decoration: none; display: flex; align-items: center; gap: 8px; font-size: 13px;">
-          <svg height="20" viewBox="0 0 16 16" width="20" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
-          GitHub
-        </a>
-        <button id="version-btn" class="btn-version" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-muted); border-radius: 4px; padding: 2px 6px; font-size: 11px; cursor: pointer;">v1.0.0</button>
+      <div class="sidebar-footer" style="display: flex; flex-direction: column; gap: 8px; padding: 12px 16px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+          <a href="https://github.com/kaiyuan/lanPrint" target="_blank" style="color: var(--text-muted); text-decoration: none; display: flex; align-items: center; gap: 8px; font-size: 13px;">
+            <svg height="18" viewBox="0 0 16 16" width="18" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
+            GitHub
+          </a>
+          <div style="display: flex; align-items: center; gap: 4px;">
+            <button id="version-btn" class="btn-version" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--text-muted); border-radius: 4px; padding: 2px 6px; font-size: 11px; cursor: pointer;">v1.0.0</button>
+            <a id="update-link" href="#" target="_blank" style="display: none; font-size: 11px; color: #34d399; text-decoration: underline;" data-i18n="update_now">更新</a>
+          </div>
+        </div>
       </div>
     </aside>
 
@@ -100,9 +112,6 @@
       <section id="settings" class="page hidden">
         <div class="settings-shell">
           <div class="settings-body">
-            <aside class="settings-nav">
-              <div class="settings-nav-item active" data-i18n="setting_general">常规设置</div>
-            </aside>
             <div class="settings-panel">
               <div class="settings-row">
                 <div>
@@ -110,7 +119,7 @@
                   <div class="text-muted" style="font-size: 12px;">Choose your preferred display language.</div>
                 </div>
                 <div class="settings-inline" style="grid-column: span 2; justify-self: end;">
-                  <select id="language-select">
+                  <select id="language-select" class="custom-select">
                     <option value="en-US" data-i18n="lang_en">English</option>
                     <option value="zh-CN" data-i18n="lang_zh_cn">简体中文</option>
                     <option value="zh-TW" data-i18n="lang_zh_tw">繁體中文</option>

@@ -27,5 +27,6 @@
   "update_latest": "您正在使用最新版本。",
   "update_available": "發現新版本：",
   "update_failed": "檢查更新失敗。",
-  "update_confirm": "已發佈，是否打開下載頁面？"
+  "update_confirm": "已發佈，是否打開下載頁面？",
+  "update_now": "立即更新"
 }

@@ -27,5 +27,6 @@
   "update_latest": "You are using the latest version.",
   "update_available": "New version available: ",
   "update_failed": "Failed to check for updates.",
-  "update_confirm": "is available. Open download page?"
+  "update_confirm": "is available. Open download page?",
+  "update_now": "Update Now"
 }

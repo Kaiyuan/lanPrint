@@ -23,6 +23,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   initSettingsNav();
   initToggles();
   fetchVersion();
+  initMobileMenu();
 });
 
 async function initLang() {
@@ -50,6 +51,31 @@ function applyTranslations() {
   document.querySelectorAll("[data-i18n]").forEach((el) => {
     const key = el.getAttribute("data-i18n");
     if (t[key]) el.textContent = t[key];
+  });
+}
+
+function initMobileMenu() {
+  const toggle = document.getElementById("menu-toggle");
+  const sidebar = document.querySelector(".sidebar");
+  if (!toggle || !sidebar) return;
+
+  toggle.addEventListener("click", () => {
+    sidebar.classList.toggle("active");
+  });
+
+  // 点击内容区域或导航项时自动关闭侧边栏
+  document.querySelectorAll(".sidebar nav li").forEach(li => {
+    li.addEventListener("click", () => {
+      if (window.innerWidth <= 760) {
+        sidebar.classList.remove("active");
+      }
+    });
+  });
+
+  document.querySelector(".content").addEventListener("click", () => {
+    if (window.innerWidth <= 760) {
+      sidebar.classList.remove("active");
+    }
   });
 }
 
@@ -442,8 +468,13 @@ async function fetchVersion() {
   }
 }
 
+function stripV(v) {
+  return v ? v.replace(/^v/, "") : "";
+}
+
 async function checkUpdates() {
   const btn = document.getElementById("version-btn");
+  const updateLink = document.getElementById("update-link");
   if (!btn) return;
 
   const t = translations[currentLang] || {};
@@ -457,13 +488,16 @@ async function checkUpdates() {
     const data = await res.json();
     const latestVersion = data.tag_name;
 
-    if (latestVersion !== currentVersion) {
-      showNotification(`${t['update_available'] || 'New version available: '}${latestVersion}`, "info");
-      if (confirm(`New version ${latestVersion} ${t['update_confirm'] || 'is available. Open download page?'}`)) {
-        window.open("https://github.com/kaiyuan/lanPrint/releases/latest", "_blank");
+    // 比较时忽略 'v' 前缀
+    if (stripV(latestVersion) !== stripV(currentVersion)) {
+      if (updateLink) {
+        updateLink.href = data.html_url;
+        updateLink.style.display = "inline";
+        showNotification(`${t['update_available'] || 'New version available: '}${latestVersion}`, "info");
       }
     } else {
       showNotification(t['update_latest'] || "You are using the latest version.", "success");
+      if (updateLink) updateLink.style.display = "none";
     }
   } catch (err) {
     console.error("Check update failed:", err);
