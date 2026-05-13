@@ -36,16 +36,39 @@ Download the binary for your platform from the [Releases](https://github.com/kai
 
 ## 📖 Developer Guide
 
-### Building
-```bash
-# Build with version injection
-go build -ldflags "-X main.version=v1.0.0 -H=windowsgui" -o lanPrint ./cmd/lanPrint
+### Local Build
+
+#### Requirements
+- Go 1.22+
+- **Linux Required**: `libappindicator3-dev` and `libgtk-3-dev` (for tray icon support)
+
+#### Build Commands
+
+**Windows:**
+```powershell
+# Build as a windowless GUI application
+go build -ldflags "-s -w -X main.version=v1.0.0 -H=windowsgui" -o lanPrint.exe ./cmd/lanPrint
 ```
 
-### Cross-Compilation
-The project uses GoReleaser for automated cross-platform builds:
+**Linux (Ubuntu/UOS/Deepin):**
 ```bash
-goreleaser release --snapshot --clean
+# Install dependencies
+sudo apt-get install -y libappindicator3-dev libgtk-3-dev
+
+# Enable CGO for tray support
+CGO_ENABLED=1 go build -ldflags "-s -w -X main.version=v1.0.0" -o lanPrint ./cmd/lanPrint
+```
+
+**macOS:**
+```bash
+go build -ldflags "-s -w -X main.version=v1.0.0" -o lanPrint ./cmd/lanPrint
+```
+
+### Cross-Platform Release (GoReleaser)
+The project uses GoReleaser to handle multi-platform distribution:
+```bash
+# Local snapshot build
+goreleaser build --snapshot --clean
 ```
 
 ## 📄 License
