@@ -110,8 +110,9 @@ func main() {
 	backendFlag := flag.Bool("backend", false, "run as CUPS backend")
 	flag.Parse()
 
-	// 兼容 Unix: 如果二进制文件名是 "lanprint" 或者带了 -backend 参数，进入 CUPS 后端模式
-	if *backendFlag || strings.HasSuffix(strings.ToLower(os.Args[0]), "lanprint") {
+	// 兼容 Unix: 仅当明确指定 -backend 或被 CUPS (路径包含 /cups/backend/) 调用时进入后端模式
+	isCUPS := strings.Contains(os.Args[0], "/cups/backend/")
+	if *backendFlag || isCUPS {
 		localprint.RunAsCUPSBackend()
 		return
 	}
