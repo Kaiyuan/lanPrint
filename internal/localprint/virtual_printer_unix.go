@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"strings"
 )
 
 // RestoreReceivers 恢复 TCP 接收器（Unix 平台不需要，CUPS 独立运行）
