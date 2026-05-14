@@ -91,6 +91,10 @@ nfpms:
         dst: /usr/share/applications/lanprint.desktop
       - src: web/static/images/lanprint-icon.png
         dst: /usr/share/icons/hicolor/128x128/apps/lanprint.png
+      - src: lanPrint
+        dst: /usr/lib/cups/backend/lanprint
+        file_info:
+          mode: 0755
       - src: LICENSE
         dst: /usr/share/doc/lanprint/copyright
       - src: README.md

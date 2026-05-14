@@ -67,7 +67,11 @@ func ensureBackendInstalled() error {
 	}
 
 	if out, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("install backend failed (elevation required): %v, out: %s", err, string(out))
+		msg := string(out)
+		if strings.Contains(msg, "Read-only file system") || strings.Contains(msg, "只读文件系统") {
+			return fmt.Errorf("安装失败：系统目录只读。请使用 .deb 安装包安装 lanPrint，或手动将程序复制到 %s", backendPath)
+		}
+		return fmt.Errorf("install backend failed (elevation required): %v, out: %s", err, msg)
 	}
 	
 	// 确保权限正确 (Linux)
