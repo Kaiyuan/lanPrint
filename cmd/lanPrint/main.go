@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"os/exec"
 	"runtime"
@@ -148,6 +149,16 @@ func main() {
 		}
 		return
 	}
+
+	// 单实例检测：如果 55233 端口已被占用，说明已有实例在运行
+	// 此时直接打开浏览器并退出，避免重复启动多个进程
+	ln, err := net.Listen("tcp", ":55233")
+	if err != nil {
+		// 端口被占用，尝试唤起已存在的实例（即打开设置页面）
+		openSettingsPage()
+		return
+	}
+	_ = ln.Close()
 
 	runDesktop()
 }
