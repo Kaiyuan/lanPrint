@@ -1,9 +1,11 @@
 [Desktop Entry]
-Type=Application
 Name=lanPrint
+Name[zh_CN]=lanPrint 打印网关
 Comment=Lightweight cross-platform printing gateway
+Comment[zh_CN]=轻量级跨平台打印网关，共享本地打印机到网络
 Exec=/usr/bin/lanPrint
-Icon=lanprint
+Icon=com.kaiyuan.lanprint
 Terminal=false
+Type=Application
 Categories=Utility;
 StartupNotify=true

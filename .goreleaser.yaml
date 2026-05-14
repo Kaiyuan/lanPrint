@@ -77,7 +77,7 @@ release:
 
 nfpms:
   - id: lanPrint
-    package_name: lanprint
+    package_name: com.kaiyuan.lanprint
     vendor: lanPrint
     homepage: https://github.com/kaiyuan/lanPrint
     maintainer: kaiyuan <kaiyuan@boxks.com>
@@ -85,15 +85,29 @@ nfpms:
     license: MIT
     formats:
       - deb
-    bindir: /usr/bin
     contents:
+      # UOS info file
+      - src: packaging/linux/info
+        dst: /opt/apps/com.kaiyuan.lanprint/info
+      # Binary
+      - src: lanPrint
+        dst: /opt/apps/com.kaiyuan.lanprint/files/bin/lanPrint
+        file_info:
+          mode: 0755
+      # Desktop Entry
       - src: packaging/linux/lanprint.desktop
-        dst: /usr/share/applications/lanprint.desktop
+        dst: /opt/apps/com.kaiyuan.lanprint/entries/applications/com.kaiyuan.lanprint.desktop
+      # Icon
       - src: web/static/images/lanprint-icon.png
-        dst: /usr/share/icons/hicolor/128x128/apps/lanprint.png
+        dst: /opt/apps/com.kaiyuan.lanprint/entries/icons/hicolor/128x128/apps/com.kaiyuan.lanprint.png
+      # Symlinks for system integration
+      - src: /opt/apps/com.kaiyuan.lanprint/files/bin/lanPrint
+        dst: /usr/bin/lanPrint
+        type: symlink
       - src: /usr/bin/lanPrint
         dst: /usr/lib/cups/backend/lanprint
         type: symlink
+      # Docs
       - src: LICENSE
         dst: /usr/share/doc/lanprint/copyright
       - src: README.md
