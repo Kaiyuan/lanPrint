@@ -11,8 +11,7 @@ builds:
     main: ./cmd/lanPrint
     binary: lanPrint
     env:
-      - CGO_ENABLED=1
-      - CGO_CFLAGS=-Wno-deprecated-declarations
+      - CGO_ENABLED=0
     goos:
       - windows
       - linux
@@ -25,16 +24,24 @@ builds:
       - 7
     overrides:
       - goos: linux
+        goarch: amd64
+        env:
+          - CGO_ENABLED=1
+          - CGO_CFLAGS=-Wno-deprecated-declarations
+      - goos: linux
         goarch: arm64
         env:
+          - CGO_ENABLED=1
           - CC=aarch64-linux-gnu-gcc
-      - goos: linux
-        goarch: arm
+          - CGO_CFLAGS=-Wno-deprecated-declarations
+      - goos: windows
+        goarch: amd64
         env:
-          - CGO_ENABLED=0
-      - goos: darwin
+          - CGO_ENABLED=1
+      - goos: windows
+        goarch: arm64
         env:
-          - CGO_ENABLED=0
+          - CGO_ENABLED=1
     ignore:
       - goos: darwin
         goarch: arm
