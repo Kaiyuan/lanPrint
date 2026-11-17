@@ -1,0 +1,42 @@
+[workspace]
+resolver = "2"
+members = ["crates/core", "crates/desktop", "crates/bridge"]
+
+[workspace.package]
+version = "2.0.0"
+edition = "2021"
+rust-version = "1.95"
+license = "MIT"
+authors = ["Kaiyuan <kaiyuan@boxks.com>"]
+homepage = "https://github.com/Kaiyuan/lanPrint"
+repository = "https://github.com/Kaiyuan/lanPrint"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "1"
+thiserror = "2"
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+argon2 = "0.5"
+rand = "0.8"
+hmac = "0.12"
+sha2 = "0.10"
+base64 = "0.22"
+dirs = "6"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+tokio = { version = "1", features = ["full"] }
+futures-util = "0.3"
+mdns-sd = "0.22"
+
+[profile.release]
+opt-level = "s"
+lto = "thin"
+codegen-units = 1
+strip = true
+panic = "abort"
+
+[profile.size]
+inherits = "release"
+opt-level = "z"

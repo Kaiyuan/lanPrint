@@ -1,0 +1,31 @@
+# lanPrint cloud bridge — HTTPS reverse proxy example (Caddy)
+#
+# 1. Point bridge.example.com at this server.
+# 2. Replace the auth code below with a strong secret.
+# 3. docker compose -f docker-compose.caddy.yml up -d
+#
+# Clients enter https://bridge.example.com as the bridge URL.
+
+services:
+  bridge:
+    image: kaiyuan/lanprint-bridge:latest
+    restart: unless-stopped
+    environment:
+      LANPRINT_BRIDGE_AUTH_CODE: "CHANGE-ME-TO-A-LONG-RANDOM-CODE"
+      LANPRINT_BRIDGE_PUBLIC_URL: "https://bridge.example.com"
+      RUST_LOG: "info"
+    volumes:
+      - lanprint-data:/data
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    command: caddy reverse-proxy --from bridge.example.com --to bridge:52334
+    depends_on:
+      - bridge
+
+volumes:
+  lanprint-data:

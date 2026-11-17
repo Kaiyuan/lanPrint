@@ -1,0 +1,1430 @@
+// lanPrint desktop UI. All user visible strings come from the `L` global so
+// the Rust side can switch language instantly without restarting.
+
+import { Button, CheckBox, ComboBox, LineEdit, ListView, ScrollView } from "std-widgets.slint";
+
+export struct DeviceItem {
+    id: string,
+    name: string,
+    address: string,
+    os: string,
+    online: bool,
+    cloud: bool,
+    printer-count: int,
+    selected: bool,
+}
+
+export struct PrinterItem {
+    local-name: string,
+    remote-name: string,
+    device-id: string,
+    display-name: string,
+    driver: string,
+    status: string,
+    online: bool,
+    supports-scan: bool,
+    added: bool,
+    has-password: bool,
+    preferences: string,
+}
+
+export struct LocalPrinterItem {
+    name: string,
+    driver: string,
+    status: string,
+    supports-scan: bool,
+    shared: bool,
+    has-password: bool,
+}
+
+export struct DiscoveryItem {
+    id: string,
+    name: string,
+    address: string,
+    os: string,
+    version: string,
+    cloud: bool,
+    shared-count: int,
+    requires-password: bool,
+}
+
+export global L {
+    in-out property <string> app-name: "lanPrint";
+    in-out property <string> app-tagline: "Share any printer across Windows, macOS and Linux";
+    in-out property <string> nav-devices: "Devices";
+    in-out property <string> connect-device: "Connect device";
+    in-out property <string> settings: "Settings";
+    in-out property <string> refresh: "Refresh";
+    in-out property <string> close: "Close";
+    in-out property <string> cancel: "Cancel";
+    in-out property <string> save: "Save";
+    in-out property <string> delete: "Delete";
+    in-out property <string> add: "Add";
+    in-out property <string> remove: "Remove";
+    in-out property <string> done: "Done";
+    in-out property <string> confirm: "Confirm";
+    in-out property <string> retry: "Retry";
+    in-out property <string> copy: "Copy";
+    in-out property <string> copied: "Copied";
+    in-out property <string> open-folder: "Open folder";
+    in-out property <string> empty-devices-title: "No shared host yet";
+    in-out property <string> empty-devices-desc: "Scan your LAN or enter a host name / IP address to connect to a lanPrint host.";
+    in-out property <string> device-online: "Online";
+    in-out property <string> device-offline: "Offline";
+    in-out property <string> device-cloud: "Cloud";
+    in-out property <string> device-lan: "LAN";
+    in-out property <string> shared-printers: "Shared printers";
+    in-out property <string> no-printers: "This host has no shared printers.";
+    in-out property <string> printer-online: "Online";
+    in-out property <string> printer-offline: "Offline";
+    in-out property <string> added: "Added";
+    in-out property <string> add-printer: "Add";
+    in-out property <string> remove-printer: "Remove";
+    in-out property <string> scan: "Scan";
+    in-out property <string> scan-now: "Scan now";
+    in-out property <string> scanning: "Scanning…";
+    in-out property <string> print-test: "Test print";
+    in-out property <string> connect-title: "Connect a shared host";
+    in-out property <string> connect-scan-tab: "Scan LAN";
+    in-out property <string> connect-manual-tab: "Manual";
+    in-out property <string> scan-lan: "Scan LAN";
+    in-out property <string> scanning-lan: "Scanning the local network…";
+    in-out property <string> scan-empty: "No lanPrint host found. Make sure the host is running and on the same network.";
+    in-out property <string> manual-input: "Enter manually";
+    in-out property <string> host-name-or-ip: "Host name or IP address";
+    in-out property <string> host-placeholder: "e.g. office-pc or 192.168.1.20";
+    in-out property <string> access-code: "Access code";
+    in-out property <string> access-code-placeholder: "Host access code";
+    in-out property <string> test-connection: "Test connection";
+    in-out property <string> testing: "Testing…";
+    in-out property <string> save-device: "Save";
+    in-out property <string> connection-ok: "Connection successful";
+    in-out property <string> connection-failed: "Connection failed";
+    in-out property <string> wrong-password: "Incorrect access code";
+    in-out property <string> host-required: "Enter a host name or IP address";
+    in-out property <string> scanned-devices: "Hosts found on the LAN";
+    in-out property <string> connect: "Connect";
+    in-out property <string> device-already-added: "This device is already connected";
+    in-out property <string> settings-title: "Settings";
+    in-out property <string> general: "General";
+    in-out property <string> language: "Language";
+    in-out property <string> autostart: "Start with the system";
+    in-out property <string> autostart-desc: "Run lanPrint in the tray when you sign in.";
+    in-out property <string> host-sharing: "Host sharing";
+    in-out property <string> host-password: "Host access code";
+    in-out property <string> host-password-desc: "Clients need this code to view and use your shared printers. Change it to invalidate existing connections.";
+    in-out property <string> set-password: "Set access code";
+    in-out property <string> change-password: "Change access code";
+    in-out property <string> password-saved: "Access code saved";
+    in-out property <string> share-printers: "Shared printers";
+    in-out property <string> share-printers-desc: "Select the printers that other devices may use.";
+    in-out property <string> no-local-printers: "No local printers found.";
+    in-out property <string> share: "Share";
+    in-out property <string> shared: "Shared";
+    in-out property <string> printer-password: "Printer access code";
+    in-out property <string> printer-password-desc: "Optional extra code for this printer. Leave empty to use only the host code.";
+    in-out property <string> scan-support: "Scanning";
+    in-out property <string> preferences: "Preferences";
+    in-out property <string> cloud-title: "Cloud sharing";
+    in-out property <string> cloud-enable: "Enable cloud sharing";
+    in-out property <string> cloud-enable-desc: "Keep this host reachable through your lanPrint bridge server.";
+    in-out property <string> server-url: "Bridge server";
+    in-out property <string> server-code: "Server access code";
+    in-out property <string> share-code: "Share code";
+    in-out property <string> share-code-desc: "Give this code to clients. They can connect from any network.";
+    in-out property <string> cloud-connect: "Connect to bridge";
+    in-out property <string> cloud-connected: "Cloud connected";
+    in-out property <string> cloud-disconnected: "Cloud disconnected";
+    in-out property <string> cloud-save: "Save and connect";
+    in-out property <string> cloud-hint: "The bridge only relays traffic; printer access codes are still verified by this host.";
+    in-out property <string> about: "About";
+    in-out property <string> version: "Version";
+    in-out property <string> open-logs: "Open log folder";
+    in-out property <string> quit: "Quit";
+    in-out property <string> minimize-to-tray: "Minimize to tray";
+    in-out property <string> tray-open: "Open lanPrint";
+    in-out property <string> tray-quit: "Quit";
+    in-out property <string> printer-added: "Printer added";
+    in-out property <string> printer-add-failed: "Could not add the printer";
+    in-out property <string> printer-removed: "Printer removed";
+    in-out property <string> device-removed: "Device removed";
+    in-out property <string> scan-saved: "Scan saved";
+    in-out property <string> scan-failed: "Scan failed";
+    in-out property <string> password-required: "An access code is required";
+    in-out property <string> token-expired: "Session expired, enter the access code again";
+    in-out property <string> cloud-registered: "Cloud share code ready";
+    in-out property <string> status-ready: "Ready";
+    in-out property <string> status-scanning: "Scanning";
+    in-out property <string> status-starting: "Starting…";
+    in-out property <string> status-no-host-password: "Set a host access code to start sharing";
+    in-out property <string> status-host-running: "Sharing on port {port}";
+    in-out property <string> status-error: "Error";
+    in-out property <string> scan-title: "Scan";
+    in-out property <string> scan-resolution: "Resolution";
+    in-out property <string> scan-color: "Color";
+    in-out property <string> scan-gray: "Grayscale";
+    in-out property <string> scan-bw: "Black & white";
+    in-out property <string> scan-format: "Format";
+    in-out property <string> scan-source: "Source";
+    in-out property <string> flatbed: "Flatbed";
+    in-out property <string> adf: "Document feeder";
+    in-out property <string> start-scan: "Start scan";
+    in-out property <string> password-dialog-title: "Printer access code";
+    in-out property <string> printer-access-code: "Access code for {printer}";
+    in-out property <string> required-for-printer: "This printer requires its own access code.";
+    in-out property <string> test-print: "Test print";
+    in-out property <string> test-print-sent: "Test page sent";
+    in-out property <string> first-run-title: "Welcome to lanPrint";
+    in-out property <string> first-run-desc: "Choose an access code for this host. Clients will need it before they can use your shared printers.";
+    in-out property <string> first-run-set: "Set access code";
+    in-out property <string> skip: "Skip for now";
+    in-out property <string> cloud-client-title: "Connect through the cloud";
+    in-out property <string> cloud-connect-desc: "Enter the bridge server and the share code provided by the host.";
+    in-out property <string> connect-cloud: "Connect";
+    in-out property <string> device-address: "Address";
+    in-out property <string> device-os: "System";
+    in-out property <string> device-printers: "Printers";
+    in-out property <string> settings-saved: "Settings saved";
+    in-out property <string> error-generic: "Something went wrong";
+    in-out property <string> help: "Help";
+    in-out property <string> docs: "Documentation";
+    in-out property <string> printer-driver: "Driver";
+    in-out property <string> printer-location: "Location";
+    in-out property <string> printer-status: "Status";
+    in-out property <string> welcome: "Welcome";
+    in-out property <string> tray-tooltip: "lanPrint — {status}";
+    in-out property <string> copy-code: "Copy code";
+    in-out property <string> cloud-offline: "Bridge unreachable";
+    in-out property <string> share-code-placeholder: "Enter the host's share code";
+    in-out property <string> bridge-url-placeholder: "https://bridge.example.com:8443";
+    in-out property <string> server-code-placeholder: "Server access code";
+    in-out property <string> no-scanners: "No scanner detected on this printer";
+    in-out property <string> save-scan: "Save scan";
+    in-out property <string> scan-in-progress: "The scanner is working…";
+    in-out property <string> show-window: "Show window";
+    in-out property <string> connection-lost: "Connection lost";
+    in-out property <string> reconnect: "Reconnect";
+    in-out property <string> cloud-client: "Cloud connection";
+    in-out property <string> cloud-client-toggle: "Connect through a cloud bridge";
+    in-out property <string> appear-online: "Online";
+    in-out property <string> preferences-hint: "Uses the preferences shared by the host.";
+    in-out property <string> no-jobs: "No print jobs yet";
+    in-out property <string> jobs: "Recent jobs";
+    in-out property <string> size: "Size";
+}
+
+component TextButton inherits Rectangle {
+    in property <string> text;
+    in property <bool> primary: false;
+    in property <bool> enabled: true;
+    in property <bool> small: false;
+    callback clicked();
+    height: small ? 28px : 34px;
+    min-width: small ? 60px : 86px;
+    border-radius: 7px;
+    background: !enabled ? #334155 : (primary ? (ta.pressed ? #6d28d9 : (ta.has-hover ? #9f7aea : #8b5cf6)) : (ta.pressed ? #334155 : (ta.has-hover ? #314158 : #273449)));
+    Text {
+        text: root.text;
+        color: enabled ? #f8fafc : #64748b;
+        font-size: small ? 12px : 13px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        width: parent.width;
+        height: parent.height;
+    }
+    ta := TouchArea {
+        enabled: root.enabled;
+        clicked => { root.clicked(); }
+    }
+}
+
+component IconButton inherits Rectangle {
+    in property <string> text;
+    in property <bool> enabled: true;
+    callback clicked();
+    width: 34px;
+    height: 34px;
+    border-radius: 7px;
+    background: ta.has-hover ? #314158 : #00000000;
+    Text {
+        text: root.text;
+        color: enabled ? #cbd5e1 : #64748b;
+        font-size: 16px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        width: parent.width;
+        height: parent.height;
+    }
+    ta := TouchArea {
+        enabled: root.enabled;
+        clicked => { root.clicked(); }
+    }
+}
+
+component InputBox inherits Rectangle {
+    in-out property <string> text;
+    in property <string> placeholder;
+    in property <bool> password: false;
+    in property <bool> enabled: true;
+    height: 36px;
+    border-radius: 7px;
+    border-width: 1px;
+    border-color: edit.has-focus ? #8b5cf6 : #334155;
+    background: #0f172a;
+    input := HorizontalLayout {
+        width: parent.width;
+        height: parent.height;
+        padding-left: 10px;
+        padding-right: 10px;
+        edit := LineEdit {
+            text <=> root.text;
+            placeholder-text: root.placeholder;
+            enabled: root.enabled;
+            input-type: root.password ? InputType.password : InputType.text;
+            font-size: 13px;
+            horizontal-stretch: 1;
+            height: parent.height;
+        }
+    }
+}
+
+component StatusDot inherits Rectangle {
+    in property <bool> online: true;
+    width: 8px;
+    height: 8px;
+    border-radius: 4px;
+    background: online ? #22c55e : #64748b;
+}
+
+component Badge inherits Rectangle {
+    in property <string> text;
+    in property <color> tone: #334155;
+    height: 20px;
+    border-radius: 10px;
+    background: tone;
+    width: label.width + 16px;
+    label := Text {
+        x: 8px;
+        text: root.text;
+        color: #e2e8f0;
+        font-size: 10px;
+        vertical-alignment: center;
+        height: parent.height;
+    }
+}
+
+component SectionTitle inherits Text {
+    color: #e2e8f0;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+component MutedText inherits Text {
+    color: #94a3b8;
+    font-size: 12px;
+}
+
+export component MainWindow inherits Window {
+    title: "lanPrint";
+    width: 1000px;
+    height: 700px;
+    background: #0f172a;
+    icon: @image-url("assets/lanprint-icon.png");
+
+    in-out property <[DeviceItem]> devices: [];
+    in-out property <[PrinterItem]> printers: [];
+    in-out property <[LocalPrinterItem]> local-printers: [];
+    in-out property <[DiscoveryItem]> discoveries: [];
+    in-out property <[string]> language-names: ["简体中文", "繁體中文", "English", "Français", "Deutsch", "Italiano", "Español", "日本語", "한국어"];
+    in-out property <int> language-index: 0;
+    in-out property <string> selected-device: "";
+    in-out property <string> selected-device-name: "";
+    in-out property <string> selected-device-address: "";
+    in-out property <bool> selected-device-online: false;
+    in-out property <bool> busy: false;
+    in-out property <string> status-text: "";
+    in-out property <string> cloud-status: "";
+    in-out property <string> share-code: "";
+    in-out property <string> version-text: "";
+    in-out property <bool> host-password-set: false;
+    in-out property <bool> autostart: true;
+    in-out property <string> host-password-input: "";
+    in-out property <string> cloud-server: "";
+    in-out property <string> cloud-code: "";
+    in-out property <bool> cloud-enabled: false;
+    in-out property <string> toast-text: "";
+    in-out property <bool> toast-open: false;
+
+    in-out property <bool> connect-open: false;
+    in-out property <int> connect-tab: 0;
+    in-out property <bool> connect-scanning: false;
+    in-out property <bool> connect-testing: false;
+    in-out property <string> connect-name: "";
+    in-out property <string> connect-address: "";
+    in-out property <string> connect-code: "";
+    in-out property <string> connect-error: "";
+    in-out property <string> connect-ok: "";
+    in-out property <bool> connect-cloud-on: false;
+    in-out property <string> connect-cloud-server: "";
+    in-out property <string> connect-cloud-code: "";
+
+    in-out property <bool> settings-open: false;
+    in-out property <int> settings-tab: 0;
+
+    in-out property <bool> password-open: false;
+    in-out property <string> password-target: "";
+    in-out property <int> password-kind: 0;
+    in-out property <string> password-input: "";
+    in-out property <string> password-title: "";
+
+    in-out property <bool> scan-open: false;
+    in-out property <string> scan-target: "";
+    in-out property <int> scan-resolution-index: 2;
+    in-out property <int> scan-color-index: 0;
+    in-out property <int> scan-source-index: 0;
+    in-out property <bool> scan-busy: false;
+
+    in-out property <bool> first-run-open: false;
+    in-out property <string> first-run-password: "";
+
+    callback refresh();
+    callback open-connect();
+    callback open-settings();
+    callback select-device(string);
+    callback remove-device(string);
+    callback add-printer(string, string, string);
+    callback remove-printer(string);
+    callback test-print(string);
+    callback open-preferences(string);
+    callback open-scan(string);
+    callback start-scan(string, int, int, int);
+    callback test-connection(string, string, string, string, string, bool);
+    callback save-connection(string, string, string, string, string, bool);
+    callback scan-lan();
+    callback pick-discovery(string);
+    callback close-connect();
+    callback language-changed(string);
+    callback set-autostart(bool);
+    callback set-host-password(string);
+    callback share-printer(string, bool);
+    callback printer-password(string, string);
+    callback edit-printer-password(string);
+    callback cloud-save(bool, string, string);
+    callback copy-share-code();
+    callback password-confirm(int, string, string);
+    callback close-password();
+    callback close-scan();
+    callback toast-close();
+    callback quit-app();
+    callback open-docs();
+    callback open-logs();
+    callback open-scan-folder();
+    callback set-first-run-password(string);
+    callback skip-first-run();
+    callback close-overlays();
+
+    Timer {
+        interval: 4s;
+        running: root.toast-open;
+        triggered => { root.toast-open = false; }
+    }
+
+    Rectangle {
+        width: parent.width;
+        height: parent.height;
+        background: #0f172a;
+
+        // ---------- header ----------
+        Rectangle {
+            x: 0;
+            y: 0;
+            width: parent.width;
+            height: 68px;
+            background: #111c33;
+            border-width: 0;
+            Rectangle {
+                x: 0;
+                y: parent.height - 1px;
+                width: parent.width;
+                height: 1px;
+                background: #24344d;
+            }
+            HorizontalLayout {
+                padding-left: 22px;
+                padding-right: 18px;
+                spacing: 12px;
+                alignment: start;
+                Rectangle {
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 9px;
+                    Image {
+                        source: @image-url("assets/lanprint-icon.png");
+                        width: parent.width;
+                        height: parent.height;
+                    }
+                }
+                VerticalLayout {
+                    alignment: center;
+                    spacing: 1px;
+                    Text {
+                        text: L.app-name;
+                        color: #f8fafc;
+                        font-size: 18px;
+                        font-weight: 700;
+                    }
+                    Text {
+                        text: L.app-tagline;
+                        color: #94a3b8;
+                        font-size: 11px;
+                    }
+                }
+                Rectangle { horizontal-stretch: 1; }
+                TextButton {
+                    text: L.refresh;
+                    small: true;
+                    clicked => { root.refresh(); }
+                }
+                TextButton {
+                    text: L.connect-device;
+                    primary: true;
+                    clicked => { root.open-connect(); }
+                }
+                TextButton {
+                    text: L.settings;
+                    clicked => { root.open-settings(); }
+                }
+            }
+        }
+
+        // ---------- body ----------
+        HorizontalLayout {
+            y: 68px;
+            width: parent.width;
+            height: parent.height - 68px - 34px;
+            padding: 16px;
+            spacing: 14px;
+
+            // device column
+            Rectangle {
+                width: 310px;
+                border-radius: 10px;
+                background: #111c33;
+                border-width: 1px;
+                border-color: #24344d;
+                VerticalLayout {
+                    padding: 12px;
+                    spacing: 10px;
+                    HorizontalLayout {
+                        Text { text: L.nav-devices; color: #e2e8f0; font-size: 14px; font-weight: 600; vertical-alignment: center; }
+                        Rectangle { horizontal-stretch: 1; }
+                        if root.busy : Text { text: "…"; color: #22d3ee; font-size: 14px; }
+                    }
+                    if root.devices.length == 0 : Rectangle {
+                        vertical-stretch: 1;
+                        VerticalLayout {
+                            alignment: center;
+                            spacing: 8px;
+                            Text { text: "🖨"; color: #475569; font-size: 34px; horizontal-alignment: center; }
+                            Text {
+                                text: L.empty-devices-title;
+                                color: #cbd5e1;
+                                font-size: 14px;
+                                horizontal-alignment: center;
+                            }
+                            Text {
+                                text: L.empty-devices-desc;
+                                color: #64748b;
+                                font-size: 12px;
+                                wrap: word-wrap;
+                                horizontal-alignment: center;
+                                width: parent.width - 20px;
+                            }
+                            TextButton {
+                                text: L.connect-device;
+                                primary: true;
+                                clicked => { root.open-connect(); }
+                            }
+                        }
+                    }
+                    if root.devices.length > 0 : ListView {
+                        vertical-stretch: 1;
+                        for d in root.devices : Rectangle {
+                            height: 70px;
+                            border-radius: 8px;
+                            background: d.selected ? #273449 : (touch.has-hover ? #1b2940 : #00000000);
+                            border-width: d.selected ? 1px : 0px;
+                            border-color: #8b5cf6;
+                            HorizontalLayout {
+                                padding: 10px;
+                                spacing: 9px;
+                                Rectangle {
+                                    width: 32px;
+                                    height: 32px;
+                                    border-radius: 8px;
+                                    background: d.online ? #173a2c : #1e293b;
+                                    Text {
+                                        text: "▣";
+                                        color: d.online ? #22c55e : #64748b;
+                                        font-size: 16px;
+                                        horizontal-alignment: center;
+                                        vertical-alignment: center;
+                                        width: parent.width;
+                                        height: parent.height;
+                                    }
+                                }
+                                VerticalLayout {
+                                    spacing: 2px;
+                                    alignment: center;
+                                    Text {
+                                        text: d.name;
+                                        color: #f1f5f9;
+                                        font-size: 13px;
+                                        font-weight: 600;
+                                        overflow: elide;
+                                    }
+                                    Text {
+                                        text: d.address;
+                                        color: #94a3b8;
+                                        font-size: 10px;
+                                        overflow: elide;
+                                    }
+                                }
+                                Rectangle { horizontal-stretch: 1; }
+                                VerticalLayout {
+                                    alignment: center;
+                                    spacing: 3px;
+                                    HorizontalLayout {
+                                        spacing: 4px;
+                                        alignment: end;
+                                        StatusDot { online: d.online; }
+                                        Text {
+                                            text: d.online ? L.device-online : L.device-offline;
+                                            color: d.online ? #22c55e : #64748b;
+                                            font-size: 10px;
+                                        }
+                                    }
+                                    Badge { text: d.cloud ? L.device-cloud : L.device-lan; tone: d.cloud ? #0e7490 : #334155; }
+                                }
+                            }
+                            touch := TouchArea {
+                                clicked => { root.select-device(d.id); }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // detail column
+            Rectangle {
+                horizontal-stretch: 1;
+                border-radius: 10px;
+                background: #111c33;
+                border-width: 1px;
+                border-color: #24344d;
+                if root.selected-device == "" : Rectangle {
+                    VerticalLayout {
+                        alignment: center;
+                        spacing: 10px;
+                        Text { text: "◈"; color: #334155; font-size: 40px; horizontal-alignment: center; }
+                        Text {
+                            text: L.empty-devices-title;
+                            color: #94a3b8;
+                            font-size: 14px;
+                            horizontal-alignment: center;
+                        }
+                    }
+                }
+                if root.selected-device != "" : VerticalLayout {
+                    padding: 14px;
+                    spacing: 10px;
+                    HorizontalLayout {
+                        spacing: 8px;
+                        VerticalLayout {
+                            spacing: 2px;
+                            Text { text: root.selected-device-name; color: #f8fafc; font-size: 18px; font-weight: 700; }
+                            Text { text: root.selected-device-address; color: #94a3b8; font-size: 11px; }
+                        }
+                        Rectangle { horizontal-stretch: 1; }
+                        StatusDot { online: root.selected-device-online; }
+                        Text {
+                            text: root.selected-device-online ? L.device-online : L.device-offline;
+                            color: root.selected-device-online ? #22c55e : #64748b;
+                            font-size: 12px;
+                            vertical-alignment: center;
+                        }
+                        TextButton {
+                            text: L.remove;
+                            small: true;
+                            clicked => { root.remove-device(root.selected-device); }
+                        }
+                    }
+                    Rectangle { height: 1px; background: #24344d; }
+                    Text { text: L.shared-printers; color: #cbd5e1; font-size: 12px; font-weight: 600; }
+                    if root.printers.length == 0 : Rectangle {
+                        vertical-stretch: 1;
+                        Text {
+                            text: L.no-printers;
+                            color: #64748b;
+                            font-size: 13px;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+                    if root.printers.length > 0 : ListView {
+                        vertical-stretch: 1;
+                        for p in root.printers : Rectangle {
+                            height: 108px;
+                            border-radius: 9px;
+                            background: #16233b;
+                            border-width: 1px;
+                            border-color: #24344d;
+                            VerticalLayout {
+                                padding: 12px;
+                                spacing: 5px;
+                                HorizontalLayout {
+                                    spacing: 8px;
+                                    Text { text: "▤"; color: #8b5cf6; font-size: 18px; vertical-alignment: center; }
+                                    Text {
+                                        text: p.display-name;
+                                        color: #f1f5f9;
+                                        font-size: 14px;
+                                        font-weight: 600;
+                                        vertical-alignment: center;
+                                    }
+                                    Badge {
+                                        text: p.status;
+                                        tone: p.online ? #166534 : #475569;
+                                    }
+                                    if p.supports-scan : Badge { text: L.scan-support; tone: #0e7490; }
+                                    if p.has-password : Badge { text: "🔒"; tone: #7c3aed; }
+                                    Rectangle { horizontal-stretch: 1; }
+                                    if p.added : HorizontalLayout {
+                                        spacing: 6px;
+                                        Text {
+                                            text: L.added;
+                                            color: #22c55e;
+                                            font-size: 11px;
+                                            vertical-alignment: center;
+                                        }
+                                        if p.supports-scan : TextButton {
+                                            text: L.scan;
+                                            small: true;
+                                            clicked => { root.open-scan(p.local-name); }
+                                        }
+                                        TextButton {
+                                            text: L.print-test;
+                                            small: true;
+                                            clicked => { root.test-print(p.local-name); }
+                                        }
+                                        TextButton {
+                                            text: L.preferences;
+                                            small: true;
+                                            clicked => { root.open-preferences(p.local-name); }
+                                        }
+                                        TextButton {
+                                            text: L.remove;
+                                            small: true;
+                                            clicked => { root.remove-printer(p.local-name); }
+                                        }
+                                    }
+                                    if !p.added : TextButton {
+                                        text: L.add-printer;
+                                        primary: true;
+                                        small: true;
+                                        clicked => {
+                                            if p.has-password {
+                                                root.password-target = p.remote-name;
+                                                root.password-kind = 2;
+                                                root.password-title = L.printer-password;
+                                                root.password-input = "";
+                                                root.password-open = true;
+                                            } else {
+                                                root.add-printer(p.device-id, p.remote-name, "");
+                                            }
+                                        }
+                                    }
+                                }
+                                Text {
+                                    text: p.driver;
+                                    color: #94a3b8;
+                                    font-size: 11px;
+                                    overflow: elide;
+                                }
+                                Text {
+                                    text: p.preferences;
+                                    color: #64748b;
+                                    font-size: 10px;
+                                    overflow: elide;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ---------- status bar ----------
+        Rectangle {
+            y: parent.height - 34px;
+            width: parent.width;
+            height: 34px;
+            background: #0b1424;
+            border-width: 0;
+            HorizontalLayout {
+                padding-left: 16px;
+                padding-right: 16px;
+                spacing: 10px;
+                alignment: start;
+                StatusDot { online: root.status-text != ""; }
+                Text { text: root.status-text; color: #94a3b8; font-size: 11px; vertical-alignment: center; }
+                if root.share-code != "" : Text {
+                    text: L.share-code + ": " + root.share-code;
+                    color: #22d3ee;
+                    font-size: 11px;
+                    vertical-alignment: center;
+                }
+                if root.cloud-status != "" : Text {
+                    text: root.cloud-status;
+                    color: root.cloud-status == L.cloud-connected ? #22c55e : #f59e0b;
+                    font-size: 11px;
+                    vertical-alignment: center;
+                }
+                Rectangle { horizontal-stretch: 1; }
+                Text { text: "v" + root.version-text; color: #475569; font-size: 10px; vertical-alignment: center; }
+            }
+        }
+
+        // ---------- connect dialog ----------
+        if root.connect-open : Rectangle {
+            width: parent.width;
+            height: parent.height;
+            background: #00000099;
+            block := TouchArea { }
+            Rectangle {
+                width: 560px;
+                height: 560px;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+                border-radius: 14px;
+                background: #111c33;
+                border-width: 1px;
+                border-color: #334155;
+                VerticalLayout {
+                    padding: 20px;
+                    spacing: 12px;
+                    HorizontalLayout {
+                        Text { text: L.connect-title; color: #f8fafc; font-size: 18px; font-weight: 700; }
+                        Rectangle { horizontal-stretch: 1; }
+                        IconButton { text: "✕"; clicked => { root.close-connect(); } }
+                    }
+                    HorizontalLayout {
+                        spacing: 6px;
+                        TextButton {
+                            text: L.connect-scan-tab;
+                            small: true;
+                            primary: root.connect-tab == 0;
+                            clicked => { root.connect-tab = 0; }
+                        }
+                        TextButton {
+                            text: L.connect-manual-tab;
+                            small: true;
+                            primary: root.connect-tab == 1;
+                            clicked => { root.connect-tab = 1; }
+                        }
+                        Rectangle { horizontal-stretch: 1; }
+                    }
+                    if root.connect-tab == 0 : VerticalLayout {
+                        vertical-stretch: 1;
+                        spacing: 8px;
+                        HorizontalLayout {
+                            spacing: 8px;
+                            Text { text: L.scanned-devices; color: #cbd5e1; font-size: 12px; font-weight: 600; vertical-alignment: center; }
+                            Rectangle { horizontal-stretch: 1; }
+                            TextButton {
+                                text: root.connect-scanning ? L.scanning : L.scan-lan;
+                                small: true;
+                                enabled: !root.connect-scanning;
+                                clicked => { root.scan-lan(); }
+                            }
+                        }
+                        if root.discoveries.length == 0 : Rectangle {
+                            vertical-stretch: 1;
+                            Text {
+                                text: root.connect-scanning ? L.scanning-lan : L.scan-empty;
+                                color: #64748b;
+                                font-size: 12px;
+                                wrap: word-wrap;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                                width: parent.width - 30px;
+                            }
+                        }
+                        if root.discoveries.length > 0 : ListView {
+                            vertical-stretch: 1;
+                            for d in root.discoveries : Rectangle {
+                                height: 60px;
+                                border-radius: 8px;
+                                background: #16233b;
+                                HorizontalLayout {
+                                    padding: 10px;
+                                    spacing: 8px;
+                                    VerticalLayout {
+                                        spacing: 2px;
+                                        alignment: center;
+                                        Text { text: d.name; color: #f1f5f9; font-size: 13px; font-weight: 600; }
+                                        Text {
+                                            text: d.address + " · " + d.os + " · v" + d.version;
+                                            color: #94a3b8;
+                                            font-size: 10px;
+                                        }
+                                    }
+                                    Rectangle { horizontal-stretch: 1; }
+                                    if d.cloud : Badge { text: L.device-cloud; tone: #0e7490; }
+                                    TextButton {
+                                        text: L.connect;
+                                        small: true;
+                                        primary: true;
+                                        clicked => {
+                                            root.connect-name = d.name;
+                                            root.connect-address = d.address;
+                                            root.connect-tab = 1;
+                                            root.connect-cloud-on = false;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        TextButton {
+                            text: L.manual-input;
+                            clicked => { root.connect-tab = 1; }
+                        }
+                    }
+                    if root.connect-tab == 1 : VerticalLayout {
+                        vertical-stretch: 1;
+                        spacing: 8px;
+                        CheckBox {
+                            text: L.cloud-client-toggle;
+                            checked <=> root.connect-cloud-on;
+                            font-size: 12px;
+                        }
+                        if root.connect-cloud-on : VerticalLayout {
+                            spacing: 6px;
+                            Text { text: L.server-url; color: #cbd5e1; font-size: 12px; }
+                            InputBox {
+                                text <=> root.connect-cloud-server;
+                                placeholder: L.bridge-url-placeholder;
+                            }
+                            Text { text: L.share-code; color: #cbd5e1; font-size: 12px; }
+                            InputBox {
+                                text <=> root.connect-cloud-code;
+                                placeholder: L.share-code-placeholder;
+                            }
+                            Text {
+                                text: L.cloud-connect-desc;
+                                color: #64748b;
+                                font-size: 10px;
+                                wrap: word-wrap;
+                            }
+                        }
+                        if !root.connect-cloud-on : VerticalLayout {
+                            spacing: 6px;
+                            Text { text: L.host-name-or-ip; color: #cbd5e1; font-size: 12px; }
+                            InputBox {
+                                text <=> root.connect-address;
+                                placeholder: L.host-placeholder;
+                            }
+                            Text { text: ""; color: #00000000; font-size: 1px; height: 0px; }
+                        }
+                        Text { text: L.access-code; color: #cbd5e1; font-size: 12px; }
+                        InputBox {
+                            text <=> root.connect-code;
+                            placeholder: L.access-code-placeholder;
+                            password: true;
+                        }
+                        if root.connect-error != "" : Text {
+                            text: root.connect-error;
+                            color: #f87171;
+                            font-size: 12px;
+                            wrap: word-wrap;
+                        }
+                        if root.connect-ok != "" : Text {
+                            text: root.connect-ok;
+                            color: #22c55e;
+                            font-size: 12px;
+                        }
+                        Rectangle { vertical-stretch: 1; }
+                        HorizontalLayout {
+                            spacing: 8px;
+                            TextButton {
+                                text: root.connect-testing ? L.testing : L.test-connection;
+                                enabled: !root.connect-testing;
+                                clicked => {
+                                    root.test-connection(
+                                        root.connect-name,
+                                        root.connect-address,
+                                        root.connect-code,
+                                        root.connect-cloud-server,
+                                        root.connect-cloud-code,
+                                        root.connect-cloud-on
+                                    );
+                                }
+                            }
+                            Rectangle { horizontal-stretch: 1; }
+                            TextButton {
+                                text: L.cancel;
+                                clicked => { root.close-connect(); }
+                            }
+                            TextButton {
+                                text: L.save-device;
+                                primary: true;
+                                clicked => {
+                                    root.save-connection(
+                                        root.connect-name,
+                                        root.connect-address,
+                                        root.connect-code,
+                                        root.connect-cloud-server,
+                                        root.connect-cloud-code,
+                                        root.connect-cloud-on
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ---------- settings ----------
+        if root.settings-open : Rectangle {
+            width: parent.width;
+            height: parent.height;
+            background: #00000099;
+            Rectangle {
+                width: parent.width - 120px;
+                height: parent.height - 80px;
+                x: 60px;
+                y: 40px;
+                border-radius: 14px;
+                background: #111c33;
+                border-width: 1px;
+                border-color: #334155;
+                VerticalLayout {
+                    padding: 20px;
+                    spacing: 12px;
+                    HorizontalLayout {
+                        Text { text: L.settings-title; color: #f8fafc; font-size: 18px; font-weight: 700; }
+                        Rectangle { horizontal-stretch: 1; }
+                        IconButton { text: "✕"; clicked => { root.settings-open = false; } }
+                    }
+                    HorizontalLayout {
+                        spacing: 6px;
+                        TextButton { text: L.general; small: true; primary: root.settings-tab == 0; clicked => { root.settings-tab = 0; } }
+                        TextButton { text: L.share-printers; small: true; primary: root.settings-tab == 1; clicked => { root.settings-tab = 1; } }
+                        TextButton { text: L.cloud-title; small: true; primary: root.settings-tab == 2; clicked => { root.settings-tab = 2; } }
+                        TextButton { text: L.about; small: true; primary: root.settings-tab == 3; clicked => { root.settings-tab = 3; } }
+                        Rectangle { horizontal-stretch: 1; }
+                    }
+                    Rectangle { height: 1px; background: #24344d; }
+
+                    if root.settings-tab == 0 : ScrollView {
+                        vertical-stretch: 1;
+                        VerticalLayout {
+                            spacing: 14px;
+                            width: parent.width;
+                            Rectangle {
+                                border-radius: 10px;
+                                background: #16233b;
+                                VerticalLayout {
+                                    padding: 14px;
+                                    spacing: 10px;
+                                    SectionTitle { text: L.language; }
+                                    ComboBox {
+                                        model: root.language-names;
+                                        current-index: root.language-index;
+                                        selected(value) => {
+                                            root.language-changed(value);
+                                        }
+                                        width: 260px;
+                                    }
+                                    Rectangle { height: 1px; background: #24344d; }
+                                    CheckBox {
+                                        text: L.autostart;
+                                        checked <=> root.autostart;
+                                        toggled => { root.set-autostart(root.autostart); }
+                                        font-size: 13px;
+                                    }
+                                    MutedText { text: L.autostart-desc; }
+                                }
+                            }
+                            Rectangle {
+                                border-radius: 10px;
+                                background: #16233b;
+                                VerticalLayout {
+                                    padding: 14px;
+                                    spacing: 10px;
+                                    SectionTitle { text: L.host-sharing; }
+                                    MutedText { text: L.host-password-desc; width: parent.width; wrap: word-wrap; }
+                                    HorizontalLayout {
+                                        spacing: 8px;
+                                        InputBox {
+                                            text <=> root.host-password-input;
+                                            placeholder: root.host-password-set ? L.change-password : L.set-password;
+                                            password: true;
+                                            horizontal-stretch: 1;
+                                        }
+                                        TextButton {
+                                            text: root.host-password-set ? L.change-password : L.set-password;
+                                            primary: true;
+                                            clicked => { root.set-host-password(root.host-password-input); }
+                                        }
+                                    }
+                                    if !root.host-password-set : Text {
+                                        text: L.status-no-host-password;
+                                        color: #f59e0b;
+                                        font-size: 11px;
+                                    }
+                                }
+                            }
+                            Rectangle {
+                                border-radius: 10px;
+                                background: #16233b;
+                                VerticalLayout {
+                                    padding: 14px;
+                                    spacing: 8px;
+                                    SectionTitle { text: L.jobs; }
+                                    MutedText { text: L.no-jobs; }
+                                }
+                            }
+                            HorizontalLayout {
+                                spacing: 8px;
+                                TextButton { text: L.open-logs; small: true; clicked => { root.open-logs(); } }
+                                TextButton { text: L.docs; small: true; clicked => { root.open-docs(); } }
+                                Rectangle { horizontal-stretch: 1; }
+                                TextButton { text: L.quit; small: true; clicked => { root.quit-app(); } }
+                            }
+                        }
+                    }
+
+                    if root.settings-tab == 1 : ScrollView {
+                        vertical-stretch: 1;
+                        VerticalLayout {
+                            spacing: 10px;
+                            width: parent.width;
+                            MutedText { text: L.share-printers-desc; }
+                            if root.local-printers.length == 0 : Text {
+                                text: L.no-local-printers;
+                                color: #64748b;
+                                font-size: 13px;
+                            }
+                            for lp in root.local-printers : Rectangle {
+                                height: 74px;
+                                border-radius: 9px;
+                                background: #16233b;
+                                border-width: 1px;
+                                border-color: #24344d;
+                                HorizontalLayout {
+                                    padding: 12px;
+                                    spacing: 10px;
+                                    VerticalLayout {
+                                        spacing: 2px;
+                                        alignment: center;
+                                        Text { text: lp.name; color: #f1f5f9; font-size: 13px; font-weight: 600; }
+                                        Text {
+                                            text: lp.driver + " · " + lp.status + (lp.supports-scan ? " · " + L.scan-support : "");
+                                            color: #94a3b8;
+                                            font-size: 10px;
+                                            overflow: elide;
+                                        }
+                                    }
+                                    Rectangle { horizontal-stretch: 1; }
+                                    if lp.shared : Badge { text: lp.has-password ? "🔒 " + L.shared : L.shared; tone: #166534; }
+                                    TextButton {
+                                        text: L.printer-password;
+                                        small: true;
+                                        enabled: lp.shared;
+                                        clicked => {
+                                            root.password-target = lp.name;
+                                            root.password-kind = 1;
+                                            root.password-title = L.printer-password;
+                                            root.password-input = "";
+                                            root.password-open = true;
+                                        }
+                                    }
+                                    CheckBox {
+                                        checked: lp.shared;
+                                        toggled => { root.share-printer(lp.name, !lp.shared); }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if root.settings-tab == 2 : ScrollView {
+                        vertical-stretch: 1;
+                        VerticalLayout {
+                            spacing: 12px;
+                            width: parent.width;
+                            Rectangle {
+                                border-radius: 10px;
+                                background: #16233b;
+                                VerticalLayout {
+                                    padding: 14px;
+                                    spacing: 10px;
+                                    SectionTitle { text: L.cloud-title; }
+                                    MutedText { text: L.cloud-enable-desc; width: parent.width; wrap: word-wrap; }
+                                    CheckBox {
+                                        text: L.cloud-enable;
+                                        checked <=> root.cloud-enabled;
+                                        font-size: 13px;
+                                    }
+                                    Text { text: L.server-url; color: #cbd5e1; font-size: 12px; }
+                                    InputBox {
+                                        text <=> root.cloud-server;
+                                        placeholder: L.bridge-url-placeholder;
+                                    }
+                                    Text { text: L.server-code; color: #cbd5e1; font-size: 12px; }
+                                    InputBox {
+                                        text <=> root.cloud-code;
+                                        placeholder: L.server-code-placeholder;
+                                        password: true;
+                                    }
+                                    HorizontalLayout {
+                                        spacing: 8px;
+                                        TextButton {
+                                            text: L.cloud-save;
+                                            primary: true;
+                                            clicked => { root.cloud-save(root.cloud-enabled, root.cloud-server, root.cloud-code); }
+                                        }
+                                        Rectangle { horizontal-stretch: 1; }
+                                    }
+                                    if root.share-code != "" : Rectangle {
+                                        border-radius: 8px;
+                                        background: #0f172a;
+                                        HorizontalLayout {
+                                            padding: 10px;
+                                            spacing: 8px;
+                                            VerticalLayout {
+                                                spacing: 2px;
+                                                Text { text: L.share-code; color: #94a3b8; font-size: 10px; }
+                                                Text { text: root.share-code; color: #22d3ee; font-size: 18px; font-weight: 700; letter-spacing: 2px; }
+                                            }
+                                            Rectangle { horizontal-stretch: 1; }
+                                            TextButton { text: L.copy-code; small: true; clicked => { root.copy-share-code(); } }
+                                        }
+                                    }
+                                    MutedText { text: L.cloud-hint; width: parent.width; wrap: word-wrap; }
+                                }
+                            }
+                        }
+                    }
+
+                    if root.settings-tab == 3 : VerticalLayout {
+                        vertical-stretch: 1;
+                        spacing: 10px;
+                        Rectangle {
+                            border-radius: 10px;
+                            background: #16233b;
+                            VerticalLayout {
+                                padding: 16px;
+                                spacing: 8px;
+                                Text { text: L.app-name; color: #f8fafc; font-size: 24px; font-weight: 700; }
+                                MutedText { text: L.app-tagline; }
+                                Text { text: L.version + ": " + root.version-text; color: #94a3b8; font-size: 12px; }
+                                Text { text: "MIT License · https://github.com/Kaiyuan/lanPrint"; color: #64748b; font-size: 11px; }
+                                HorizontalLayout {
+                                    spacing: 8px;
+                                    TextButton { text: L.docs; clicked => { root.open-docs(); } }
+                                    TextButton { text: L.open-logs; clicked => { root.open-logs(); } }
+                                }
+                            }
+                        }
+                        Rectangle { vertical-stretch: 1; }
+                    }
+                }
+            }
+        }
+
+        // ---------- password dialog ----------
+        if root.password-open : Rectangle {
+            width: parent.width;
+            height: parent.height;
+            background: #00000099;
+            Rectangle {
+                width: 430px;
+                height: 250px;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+                border-radius: 12px;
+                background: #111c33;
+                border-width: 1px;
+                border-color: #334155;
+                VerticalLayout {
+                    padding: 18px;
+                    spacing: 10px;
+                    Text { text: root.password-title; color: #f8fafc; font-size: 16px; font-weight: 600; }
+                    if root.password-kind == 1 : MutedText {
+                        text: L.printer-access-code;
+                        wrap: word-wrap;
+                    }
+                    InputBox {
+                        text <=> root.password-input;
+                        placeholder: L.access-code-placeholder;
+                        password: true;
+                    }
+                    Rectangle { vertical-stretch: 1; }
+                    HorizontalLayout {
+                        spacing: 8px;
+                        Rectangle { horizontal-stretch: 1; }
+                        TextButton { text: L.cancel; clicked => { root.close-password(); } }
+                        TextButton {
+                            text: L.confirm;
+                            primary: true;
+                            clicked => { root.password-confirm(root.password-kind, root.password-target, root.password-input); }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ---------- scan dialog ----------
+        if root.scan-open : Rectangle {
+            width: parent.width;
+            height: parent.height;
+            background: #00000099;
+            Rectangle {
+                width: 460px;
+                height: 380px;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+                border-radius: 12px;
+                background: #111c33;
+                border-width: 1px;
+                border-color: #334155;
+                VerticalLayout {
+                    padding: 18px;
+                    spacing: 10px;
+                    HorizontalLayout {
+                        Text { text: L.scan-title; color: #f8fafc; font-size: 16px; font-weight: 600; }
+                        Rectangle { horizontal-stretch: 1; }
+                        IconButton { text: "✕"; enabled: !root.scan-busy; clicked => { root.close-scan(); } }
+                    }
+                    Text { text: L.scan-resolution; color: #cbd5e1; font-size: 12px; }
+                    ComboBox { model: ["150 dpi", "200 dpi", "300 dpi", "600 dpi"]; current-index <=> root.scan-resolution-index; width: 220px; }
+                    Text { text: L.scan-color; color: #cbd5e1; font-size: 12px; }
+                    ComboBox { model: [L.scan-color, L.scan-gray, L.scan-bw]; current-index <=> root.scan-color-index; width: 220px; }
+                    Text { text: L.scan-source; color: #cbd5e1; font-size: 12px; }
+                    ComboBox { model: [L.flatbed, L.adf]; current-index <=> root.scan-source-index; width: 220px; }
+                    if root.scan-busy : Text { text: L.scan-in-progress; color: #22d3ee; font-size: 12px; }
+                    Rectangle { vertical-stretch: 1; }
+                    HorizontalLayout {
+                        spacing: 8px;
+                        Rectangle { horizontal-stretch: 1; }
+                        TextButton { text: L.cancel; enabled: !root.scan-busy; clicked => { root.close-scan(); } }
+                        TextButton {
+                            text: L.start-scan;
+                            primary: true;
+                            enabled: !root.scan-busy;
+                            clicked => {
+                                root.start-scan(root.scan-target, root.scan-resolution-index, root.scan-color-index, root.scan-source-index);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ---------- first run ----------
+        if root.first-run-open : Rectangle {
+            width: parent.width;
+            height: parent.height;
+            background: #000000cc;
+            Rectangle {
+                width: 500px;
+                height: 360px;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+                border-radius: 14px;
+                background: #111c33;
+                border-width: 1px;
+                border-color: #8b5cf6;
+                VerticalLayout {
+                    padding: 24px;
+                    spacing: 12px;
+                    Text { text: L.first-run-title; color: #f8fafc; font-size: 22px; font-weight: 700; }
+                    Text {
+                        text: L.first-run-desc;
+                        color: #94a3b8;
+                        font-size: 13px;
+                        wrap: word-wrap;
+                        width: parent.width;
+                    }
+                    InputBox {
+                        text <=> root.first-run-password;
+                        placeholder: L.access-code-placeholder;
+                        password: true;
+                    }
+                    MutedText { text: L.host-password-desc; width: parent.width; wrap: word-wrap; }
+                    Rectangle { vertical-stretch: 1; }
+                    HorizontalLayout {
+                        spacing: 8px;
+                        Rectangle { horizontal-stretch: 1; }
+                        TextButton { text: L.skip; clicked => { root.skip-first-run(); } }
+                        TextButton {
+                            text: L.first-run-set;
+                            primary: true;
+                            clicked => { root.set-first-run-password(root.first-run-password); }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ---------- toast ----------
+        if root.toast-open : Rectangle {
+            x: (parent.width - self.width) / 2;
+            y: parent.height - 90px;
+            width: 520px;
+            height: 44px;
+            border-radius: 10px;
+            background: #1e293b;
+            border-width: 1px;
+            border-color: #475569;
+            Text {
+                text: root.toast-text;
+                color: #f8fafc;
+                font-size: 12px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+                width: parent.width;
+                height: parent.height;
+                wrap: word-wrap;
+            }
+            TouchArea { clicked => { root.toast-close(); } }
+        }
+    }
+}
+
+// Tray menu is a separate component because a SystemTrayIcon cannot share the
+// window's globals. The Rust side feeds translated menu labels into it.
+export component TrayIcon inherits SystemTrayIcon {
+    in property <string> open-text: "Open lanPrint";
+    in property <string> quit-text: "Quit";
+    icon: @image-url("assets/lanprint-icon.png");
+    tooltip: "lanPrint";
+    title: "lanPrint";
+    callback open();
+    callback quit();
+    Menu {
+        MenuItem {
+            title: root.open-text;
+            activated => { root.open(); }
+        }
+        MenuSeparator { }
+        MenuItem {
+            title: root.quit-text;
+            activated => { root.quit(); }
+        }
+    }
+    clicked => { root.open(); }
+}

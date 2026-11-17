@@ -1,0 +1,23 @@
+services:
+  lanprint-bridge:
+    image: kaiyuan/lanprint-bridge:latest
+    container_name: lanprint-bridge
+    restart: unless-stopped
+    ports:
+      - "52334:52334"
+    environment:
+      # Generate a strong code: openssl rand -base64 24
+      LANPRINT_BRIDGE_AUTH_CODE: "${LANPRINT_BRIDGE_AUTH_CODE:?set LANPRINT_BRIDGE_AUTH_CODE}"
+      # Public https URL when running behind a reverse proxy
+      LANPRINT_BRIDGE_PUBLIC_URL: "${LANPRINT_BRIDGE_PUBLIC_URL:-}"
+      RUST_LOG: "info"
+    volumes:
+      - lanprint-data:/data
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/lanprint-bridge", "--version"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  lanprint-data:

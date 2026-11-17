@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User guide — lanPrint</title>
+  <link rel="icon" href="assets/icon.png">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header>
+  <div class="container nav">
+    <a class="brand" href="index.html"><img src="assets/icon.png" alt="">lanPrint</a>
+    <div class="nav-links">
+      <a href="index.html" data-i18n="nav_home">Home</a>
+      <a href="guide.html" class="active" data-i18n="nav_guide">User guide</a>
+      <a href="bridge.html" data-i18n="nav_server">Cloud server</a>
+      <a href="https://github.com/Kaiyuan/lanPrint" target="_blank" rel="noopener" data-i18n="nav_github">GitHub</a>
+    </div>
+    <select class="lang-select" id="lang" aria-label="Language"></select>
+  </div>
+</header>
+
+<main class="container">
+  <div class="page-title">
+    <h1 data-i18n="guide_title">lanPrint user guide</h1>
+    <p data-i18n="guide_sub">Install the app, share printers from a host, add them on a client, scan documents and connect through the cloud bridge.</p>
+  </div>
+
+  <div class="layout">
+    <aside class="toc">
+      <a href="#install" data-i18n="toc_install">Installation</a>
+      <a href="#host" data-i18n="toc_host">Share printers (host)</a>
+      <a href="#client" data-i18n="toc_client">Add printers (client)</a>
+      <a href="#scan" data-i18n="toc_scan">Scanning</a>
+      <a href="#prefs" data-i18n="toc_prefs">Printer preferences</a>
+      <a href="#cloud" data-i18n="toc_cloud">Cloud sharing</a>
+      <a href="#faq" data-i18n="toc_faq">Troubleshooting</a>
+    </aside>
+
+    <article class="doc">
+      <h2 id="install" data-i18n="install_title">Installation</h2>
+      <p data-i18n="install_intro">lanPrint is a single native binary. It starts in the system tray and keeps a small local API listening on port 52333.</p>
+
+      <h3>Windows 7 / 8 / 10 / 11</h3>
+      <p data-i18n="install_win">Download the Windows zip from Releases, extract it and run <code>lanPrint.exe</code>. The app adds itself to the startup entry on first run and shows an icon in the notification area. Allow it through Windows Firewall when prompted so clients can connect.</p>
+      <pre><code><span class="c"># PowerShell (per user install)</span>
+iwr -useb https://raw.githubusercontent.com/Kaiyuan/lanPrint/main/scripts/install.ps1 | iex</code></pre>
+
+      <h3>macOS 10.15+</h3>
+      <p data-i18n="install_mac">Download the macOS archive for your CPU (Intel or Apple Silicon), move <code>LanPrint.app</code> to Applications and launch it. The first launch may require right-click → Open because the build is ad-hoc signed.</p>
+
+      <h3>Ubuntu / Debian / UOS</h3>
+      <p data-i18n="install_linux">Extract the Linux archive and run <code>sudo ./install.sh</code>. It installs the binary, desktop entry and the CUPS backend used by client queues. The app works on X11 and Wayland; the tray uses StatusNotifierItem, so GNOME needs the AppIndicator extension.</p>
+      <pre><code><span class="c"># one-line install</span>
+curl -fsSL https://raw.githubusercontent.com/Kaiyuan/lanPrint/main/scripts/install.sh | bash</code></pre>
+      <div class="note" data-i18n="install_note">UOS 20 and Deepin 20 are supported. If the tray icon does not appear, enable the “Status Icon” / AppIndicator extension in the desktop settings.</div>
+
+      <h2 id="host" data-i18n="host_title">Share printers from this computer</h2>
+      <p data-i18n="host_intro">Every lanPrint instance can be a host. No Samba, IPP or WSD setup is involved.</p>
+      <div class="steps">
+        <div class="step"><h3 data-i18n="host_step1">Set a host access code</h3><p data-i18n="host_step1_desc">Open Settings → General and choose an access code of at least four characters. Clients cannot list or use your printers without it.</p></div>
+        <div class="step"><h3 data-i18n="host_step2">Select printers</h3><p data-i18n="host_step2_desc">Open Settings → Shared printers and toggle the printers you want to share. Each printer can have an optional additional access code.</p></div>
+        <div class="step"><h3 data-i18n="host_step3">Check the status bar</h3><p data-i18n="host_step3_desc">The status bar shows “Sharing on port 52333” and advertises the host over mDNS as <code>_lanprint._tcp.local.</code>.</p></div>
+        <div class="step"><h3 data-i18n="host_step4">Scanning</h3><p data-i18n="host_step4_desc">All-in-one printers are detected automatically. Windows uses WIA, Linux and macOS use SANE (<code>scanimage</code>). Install the vendor driver if the scanner is not detected.</p></div>
+      </div>
+      <div class="note" data-i18n="host_note">Changing the host access code immediately invalidates every previously issued client token.</div>
+
+      <h2 id="client" data-i18n="client_title">Connect to a host and add printers</h2>
+      <div class="steps">
+        <div class="step"><h3 data-i18n="client_step1">Scan or enter the address</h3><p data-i18n="client_step1_desc">Click “Connect device”. lanPrint scans the LAN with mDNS. If the host is on another subnet, click “Enter manually” and type its device name or IP address.</p></div>
+        <div class="step"><h3 data-i18n="client_step2">Test and save</h3><p data-i18n="client_step2_desc">Enter the host access code, click “Test connection”, then “Save”. The host appears in the device list with an online indicator.</p></div>
+        <div class="step"><h3 data-i18n="client_step3">Add a printer</h3><p data-i18n="client_step3_desc">Select the host, choose a shared printer and click “Add”. lanPrint creates a local virtual queue and applies the preferences shared by the host. The printer appears in every application’s print dialog.</p></div>
+        <div class="step"><h3 data-i18n="client_step4">Test and remove</h3><p data-i18n="client_step4_desc">Use “Test print” to verify the path. “Remove” deletes the local queue and stops forwarding. The host is not changed.</p></div>
+      </div>
+      <div class="note" data-i18n="client_note">When the host is offline the printer is shown as offline and jobs stay in the local queue until the connection returns or the job is cancelled.</div>
+
+      <h2 id="scan" data-i18n="scan_title">Scanning</h2>
+      <p data-i18n="scan_intro">Printers that expose a scanner show a Scan button after they are added. Scanning runs on the host, where the device is physically connected, and the result is saved on the client.</p>
+      <ul>
+        <li data-i18n="scan_win">Windows: WIA is used. Flatbed and document feeder sources are supported when the driver exposes them.</li>
+        <li data-i18n="scan_unix">Linux/macOS: SANE (<code>scanimage</code>) is used. Install <code>sane-utils</code> and the vendor backend.</li>
+        <li data-i18n="scan_res">Choose 150/200/300/600 dpi, color or grayscale, flatbed or ADF. Files are saved to <code>Downloads/lanPrint-scans</code>.</li>
+      </ul>
+
+      <h2 id="prefs" data-i18n="prefs_title">Printer preferences</h2>
+      <p data-i18n="prefs_desc">The host shares paper size, colour, duplex and resolution. The client applies those defaults to its local queue. The “Preferences” button on an added printer opens the operating system’s driver preferences dialog so you can adjust the final settings.</p>
+
+      <h2 id="cloud" data-i18n="cloud_title">Cloud sharing</h2>
+      <p data-i18n="cloud_intro">Cloud sharing lets a client reach a host that is behind NAT or on a different network. All traffic goes through your own bridge server.</p>
+      <div class="steps">
+        <div class="step"><h3 data-i18n="cloud_step1">Deploy a bridge</h3><p data-i18n-html="cloud_step1_desc">Follow the <a href="bridge.html">server guide</a>. You need the bridge URL and the server access code.</p></div>
+        <div class="step"><h3 data-i18n="cloud_step2">Enable it on the host</h3><p data-i18n="cloud_step2_desc">Settings → Cloud sharing: enable, enter the bridge URL and server code, then save. lanPrint registers and receives an 8-character share code.</p></div>
+        <div class="step"><h3 data-i18n="cloud_step3">Connect on the client</h3><p data-i18n="cloud_step3_desc">Connect device → Enter manually → enable “Connect through a cloud bridge”, enter the bridge URL and share code, plus the host access code.</p></div>
+        <div class="step"><h3 data-i18n="cloud_step4">Print</h3><p data-i18n="cloud_step4_desc">Add printers exactly as on the LAN. The host still verifies every printer access code; the bridge only relays traffic.</p></div>
+      </div>
+      <div class="note" data-i18n="cloud_note">The bridge sees connection metadata, so run it behind HTTPS. For maximum privacy, host it yourself.</div>
+
+      <h2 id="faq" data-i18n="faq_title">Troubleshooting</h2>
+      <details class="card" style="margin:12px 0;">
+        <summary data-i18n="faq1_q">The host is not found by the LAN scan</summary>
+        <p data-i18n="faq1_a">Make sure both devices are on the same subnet, the host password is set and at least one printer is shared. Some networks block multicast DNS; use manual entry with the host IP instead.</p>
+      </details>
+      <details class="card" style="margin:12px 0;">
+        <summary data-i18n="faq2_q">Connection refused or timed out</summary>
+        <p data-i18n="faq2_a">Allow TCP port 52333 through the host firewall. On Windows the installer creates a firewall rule; if you installed manually, add one for lanPrint.exe.</p>
+      </details>
+      <details class="card" style="margin:12px 0;">
+        <summary data-i18n="faq3_q">Adding a printer fails on Linux</summary>
+        <p data-i18n="faq3_a">lanPrint needs the CUPS backend symlink and permission to run lpadmin. Run the installer with sudo, then retry. Check <code>lpstat -e</code> and <code>/var/log/cups/error_log</code>.</p>
+      </details>
+      <details class="card" style="margin:12px 0;">
+        <summary data-i18n="faq4_q">The client prints but the page is blank</summary>
+        <p data-i18n="faq4_a">The host needs a driver that can consume the job format. For Windows hosts, install the same printer driver as the client when possible. PDF jobs are opened with the system PDF handler; install one if Windows 7 has none.</p>
+      </details>
+      <details class="card" style="margin:12px 0;">
+        <summary data-i18n="faq5_q">Scanner not detected</summary>
+        <p data-i18n="faq5_a">Install the vendor WIA/SANE driver. On Linux check <code>scanimage -L</code> as the user that runs lanPrint. On Windows the WIA service must be running.</p>
+      </details>
+      <details class="card" style="margin:12px 0;">
+        <summary data-i18n="faq6_q">The tray icon is missing on Linux</summary>
+        <p data-i18n="faq6_a">Slint uses StatusNotifierItem. GNOME requires the AppIndicator/KStatusNotifierItem extension; KDE, XFCE, Cinnamon and UOS usually work out of the box.</p>
+      </details>
+    </article>
+  </div>
+</main>
+
+<footer>
+  <div class="container footer-inner">
+    <div>© 2026 lanPrint · <span data-i18n="footer_license">MIT License</span></div>
+    <div><a href="index.html" data-i18n="nav_home">Home</a> · <a href="bridge.html" data-i18n="nav_server">Cloud server</a> · <a href="https://github.com/Kaiyuan/lanPrint">GitHub</a></div>
+  </div>
+</footer>
+<script src="assets/i18n.js"></script>
+</body>
+</html>

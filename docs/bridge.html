@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cloud bridge server — lanPrint</title>
+  <link rel="icon" href="assets/icon.png">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header>
+  <div class="container nav">
+    <a class="brand" href="index.html"><img src="assets/icon.png" alt="">lanPrint</a>
+    <div class="nav-links">
+      <a href="index.html" data-i18n="nav_home">Home</a>
+      <a href="guide.html" data-i18n="nav_guide">User guide</a>
+      <a href="bridge.html" class="active" data-i18n="nav_server">Cloud server</a>
+      <a href="https://github.com/Kaiyuan/lanPrint" target="_blank" rel="noopener" data-i18n="nav_github">GitHub</a>
+    </div>
+    <select class="lang-select" id="lang" aria-label="Language"></select>
+  </div>
+</header>
+
+<main class="container">
+  <div class="page-title">
+    <h1 data-i18n="bridge_title">Deploy the lanPrint bridge</h1>
+    <p data-i18n="bridge_sub">A small Rust relay server that lets a host and a client establish a connection across the internet. Run it on any Linux or macOS machine, or in Docker.</p>
+  </div>
+
+  <div class="layout">
+    <aside class="toc">
+      <a href="#arch" data-i18n="toc_arch">Architecture</a>
+      <a href="#docker" data-i18n="toc_docker">Docker</a>
+      <a href="#compose" data-i18n="toc_compose">Docker Compose</a>
+      <a href="#script" data-i18n="toc_script">One-line install</a>
+      <a href="#tls" data-i18n="toc_tls">HTTPS / reverse proxy</a>
+      <a href="#env" data-i18n="toc_env">Configuration</a>
+      <a href="#use" data-i18n="toc_use">Connect clients</a>
+      <a href="#security" data-i18n="toc_security">Security</a>
+      <a href="#api" data-i18n="toc_api">API reference</a>
+    </aside>
+
+    <article class="doc">
+      <h2 id="arch" data-i18n="arch_title">How the bridge works</h2>
+      <p data-i18n="arch_desc">The host registers with the bridge using the server access code and receives a short share code. The host keeps an outbound WebSocket, so it works behind NAT without opening a port. A client that knows the share code asks the bridge for a session, then multiplexes HTTP-like requests over its own WebSocket. The host verifies all printer access codes locally.</p>
+      <div class="grid cols-3" style="margin:18px 0;">
+        <div class="card"><h3>1 · Host</h3><p data-i18n="arch_host">Registers, gets a share code and maintains a relay WebSocket.</p></div>
+        <div class="card"><h3>2 · Bridge</h3><p data-i18n="arch_bridge">Matches share codes, authenticates server/host/client tokens and forwards frames.</p></div>
+        <div class="card"><h3>3 · Client</h3><p data-i18n="arch_client">Connects with the share code and uses the same API as on the LAN.</p></div>
+      </div>
+      <div class="note" data-i18n="arch_note">There is no inbound port on the host and no cloud account. The share code is the only routing secret a client needs, together with the printer access code.</div>
+
+      <h2 id="docker" data-i18n="docker_title">Run with Docker</h2>
+      <pre><code>docker run -d --name lanprint-bridge \
+  --restart unless-stopped \
+  -p 52334:52334 \
+  -e LANPRINT_BRIDGE_AUTH_CODE='replace-with-a-long-random-code' \
+  -e LANPRINT_BRIDGE_PUBLIC_URL='https://bridge.example.com' \
+  -v lanprint-data:/data \
+  kaiyuan/lanprint-bridge:latest</code></pre>
+      <p data-i18n="docker_desc">The image is published for <code>linux/amd64</code> and <code>linux/arm64</code> on Docker Hub as <code>kaiyuan/lanprint-bridge</code>. The <code>/data</code> volume stores share-code mappings so hosts keep the same code after a restart.</p>
+      <div class="note warn" data-i18n="docker_warn">Always put the bridge behind HTTPS before exposing it to the internet. Do not publish port 52334 directly on a public host.</div>
+
+      <h2 id="compose" data-i18n="compose_title">Docker Compose with Caddy</h2>
+      <p data-i18n="compose_desc">The repository contains <code>deploy/docker-compose.yml</code> and <code>deploy/docker-compose.caddy.yml</code>. Caddy obtains a certificate automatically.</p>
+      <pre><code>git clone https://github.com/Kaiyuan/lanPrint.git
+cd lanPrint/deploy
+cp docker-compose.caddy.yml docker-compose.override.yml
+<span class="c"># edit the domain and auth code</span>
+docker compose -f docker-compose.caddy.yml up -d</code></pre>
+
+      <h2 id="script" data-i18n="script_title">One-line install on Linux and macOS</h2>
+      <p data-i18n="script_desc">The script installs the bridge binary, generates a server access code, creates a systemd unit (Linux) or launchd daemon (macOS) and starts the service.</p>
+      <pre><code><span class="c"># Linux</span>
+curl -fsSL https://raw.githubusercontent.com/Kaiyuan/lanPrint/main/scripts/install-bridge.sh | sudo bash
+
+<span class="c"># macOS</span>
+curl -fsSL https://raw.githubusercontent.com/Kaiyuan/lanPrint/main/scripts/install-bridge.sh | sudo bash</code></pre>
+      <p data-i18n="script_after">The access code is printed at the end and stored in <code>/etc/lanprint-bridge/bridge.env</code> (Linux). Keep it secret; it is only used by hosts, not by clients.</p>
+      <pre><code>systemctl status lanprint-bridge
+journalctl -u lanprint-bridge -f</code></pre>
+
+      <h2 id="tls" data-i18n="tls_title">HTTPS with a reverse proxy</h2>
+      <p data-i18n="tls_desc">The bridge speaks plain HTTP on its listen port and is designed to run behind Caddy, Nginx or Traefik. WebSocket upgrades must be forwarded.</p>
+      <pre><code><span class="c"># Caddyfile</span>
+bridge.example.com {
+    reverse_proxy 127.0.0.1:52334
+}</code></pre>
+      <pre><code><span class="c"># Nginx</span>
+location / {
+    proxy_pass http://127.0.0.1:52334;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_read_timeout 3600s;
+}</code></pre>
+      <p data-i18n="tls_after">Set <code>LANPRINT_BRIDGE_PUBLIC_URL=https://bridge.example.com</code> so clients receive the correct URL in their session response.</p>
+
+      <h2 id="env" data-i18n="env_title">Configuration</h2>
+      <table>
+        <tr><th data-i18n="env_var">Variable</th><th data-i18n="env_default">Default</th><th data-i18n="env_desc_h">Description</th></tr>
+        <tr><td><code>LANPRINT_BRIDGE_ADDR</code></td><td><code>0.0.0.0:52334</code></td><td data-i18n="env_addr">Listen address.</td></tr>
+        <tr><td><code>LANPRINT_BRIDGE_AUTH_CODE</code></td><td><span data-i18n="required">required</span></td><td data-i18n="env_auth">Server access code. Hosts enter it once when enabling cloud sharing.</td></tr>
+        <tr><td><code>LANPRINT_BRIDGE_DATA</code></td><td><code>data/hosts.json</code></td><td data-i18n="env_data">Persistent share-code database.</td></tr>
+        <tr><td><code>LANPRINT_BRIDGE_PUBLIC_URL</code></td><td><span data-i18n="empty">empty</span></td><td data-i18n="env_public">Public HTTPS URL returned to clients.</td></tr>
+        <tr><td><code>RUST_LOG</code></td><td><code>info</code></td><td data-i18n="env_log">Log verbosity.</td></tr>
+      </table>
+      <pre><code>lanprint-bridge --help
+lanprint-bridge --addr 0.0.0.0:52334 --auth-code '...' --data /data/hosts.json</code></pre>
+
+      <h2 id="use" data-i18n="use_title">Connect the desktop app</h2>
+      <div class="steps">
+        <div class="step"><h3 data-i18n="use_host">Host</h3><p data-i18n="use_host_desc">Settings → Cloud sharing → enable, enter the bridge URL (for example <code>https://bridge.example.com</code>) and the server access code. Save. The 8-character share code appears below.</p></div>
+        <div class="step"><h3 data-i18n="use_client">Client</h3><p data-i18n="use_client_desc">Connect device → manual → enable cloud connection, enter the bridge URL, the share code and the host access code.</p></div>
+        <div class="step"><h3 data-i18n="use_add">Add printers</h3><p data-i18n="use_add_desc">The host’s shared printers appear exactly as on a LAN. Add them once; they stay configured and reconnect automatically.</p></div>
+      </div>
+
+      <h2 id="security" data-i18n="security_title">Security notes</h2>
+      <ul>
+        <li data-i18n="sec1">Use a long random server access code; it is a bearer secret for host registration.</li>
+        <li data-i18n="sec2">Always use HTTPS/WSS in production. Without TLS, metadata and print data cross the network in clear text.</li>
+        <li data-i18n="sec3">Printer access codes are verified by the host, not by the bridge. Argon2id hashes never leave the host.</li>
+        <li data-i18n="sec4">The bridge stores only device identity, share code and timestamps. Print jobs are relayed and not written to disk.</li>
+        <li data-i18n="sec5">Rotate the server code by restarting the bridge with a new value; hosts must re-register.</li>
+      </ul>
+
+      <h2 id="api" data-i18n="api_title">API reference</h2>
+      <p data-i18n="api_desc">All endpoints are JSON over HTTP. Hosts authenticate with the server access code; clients use a short-lived session token issued by <code>/clients/connect</code>.</p>
+      <table>
+        <tr><th>Method</th><th>Path</th><th data-i18n="api_desc_h">Description</th></tr>
+        <tr><td>GET</td><td><code>/health</code></td><td data-i18n="api_health">Health and version.</td></tr>
+        <tr><td>POST</td><td><code>/api/v1/hosts/register</code></td><td data-i18n="api_register">Register a host and receive a share code (bearer server code).</td></tr>
+        <tr><td>POST</td><td><code>/api/v1/hosts/heartbeat</code></td><td data-i18n="api_heartbeat">Update host presence (bearer host token).</td></tr>
+        <tr><td>POST</td><td><code>/api/v1/clients/connect</code></td><td data-i18n="api_connect">Exchange a share code for a session token and address hint.</td></tr>
+        <tr><td>GET</td><td><code>/ws/host</code></td><td data-i18n="api_wshost">Host relay WebSocket.</td></tr>
+        <tr><td>GET</td><td><code>/ws/client</code></td><td data-i18n="api_wsclient">Client relay WebSocket.</td></tr>
+        <tr><td>GET</td><td><code>/api/v1/stats</code></td><td data-i18n="api_stats">Host counts (bearer server code).</td></tr>
+      </table>
+      <div class="note" data-i18n="api_note">Large print jobs are chunked into 256 KiB frames and base64 encoded inside the relay WebSocket. The bridge enforces a bounded in-memory queue and drops stale sessions.</div>
+
+      <h2 data-i18n="trouble_title">Troubleshooting</h2>
+      <ul>
+        <li data-i18n="trouble1">“Host offline” means the host’s relay WebSocket is not connected. Check the host status bar and its outbound network access.</li>
+        <li data-i18n="trouble2">A 401 from <code>/hosts/register</code> means the server access code is wrong.</li>
+        <li data-i18n="trouble3">If clients connect but print jobs time out, verify that the reverse proxy forwards WebSocket upgrades and does not buffer responses.</li>
+        <li data-i18n="trouble4">The share code changes if <code>/data</code> is not persisted. Mount the volume.</li>
+      </ul>
+    </article>
+  </div>
+</main>
+
+<footer>
+  <div class="container footer-inner">
+    <div>© 2026 lanPrint · <span data-i18n="footer_license">MIT License</span></div>
+    <div><a href="index.html" data-i18n="nav_home">Home</a> · <a href="guide.html" data-i18n="nav_guide">User guide</a> · <a href="https://github.com/Kaiyuan/lanPrint">GitHub</a></div>
+  </div>
+</footer>
+<script src="assets/i18n.js"></script>
+</body>
+</html>

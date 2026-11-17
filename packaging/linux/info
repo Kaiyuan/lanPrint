@@ -1,13 +1,13 @@
 {
     "appid": "com.kaiyuan.lanprint",
     "name": "lanPrint",
-    "version": "0.1.1",
+    "version": "2.0.0",
     "arch": ["amd64", "arm64"],
     "permissions": {
         "autostart": true,
         "notification": true,
         "trayicon": true,
-        "clipboard": false,
+        "clipboard": true,
         "network": true,
         "camera": false,
         "microphone": false,

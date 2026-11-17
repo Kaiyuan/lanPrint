@@ -1,0 +1,14 @@
+[Unit]
+Description=lanPrint printer sharing agent
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/lanPrint --headless
+Restart=on-failure
+RestartSec=3
+# Keep memory use low
+MemoryMax=256M
+
+[Install]
+WantedBy=default.target
