@@ -225,6 +225,8 @@ docker compose up -d
 
 生产环境请使用 `deploy/docker-compose.caddy.yml` 或 Nginx/Traefik 提供 HTTPS，并转发 WebSocket 升级。
 
+> 桥接服务端使用独立版本号（`crates/bridge/Cargo.toml`），`--version`、`/health` 以及云端握手都会返回该版本。Docker 镜像以服务端版本号和 `latest` 打 tag；发布新 Tag 时若服务端版本没有变化，会跳过镜像构建与推送。需要强制重建镜像时提升该版本号即可。
+
 ### Linux / macOS 一键安装
 
 ```bash
@@ -283,7 +285,7 @@ Slint 采用 GPL-3.0 / Royalty-free 2.0 多许可协议。本项目以 Slint Roy
 - 编译 Windows x86_64 / i686、Windows 7、macOS Intel / Apple Silicon、Linux x86_64 / aarch64，以及 best-effort 的静态 musl 版本；
 - 生成 Windows zip 与 Inno Setup 安装包、macOS `.app`、Linux tar.gz；
 - 编译桥接服务端并上传；
-- 构建 `kaiyuan/lanprint-bridge` 多架构 Docker 镜像并推送 Docker Hub；
+- 仅当当前服务端版本尚未发布到 Docker Hub 时，构建并推送 `kaiyuan/lanprint-bridge` 多架构镜像；
 - 创建 GitHub Release 并附加所有产物。
 
 需要在仓库 Secrets 中配置：

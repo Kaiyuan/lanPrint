@@ -217,6 +217,8 @@ docker compose up -d
 
 For production use `deploy/docker-compose.caddy.yml` or Nginx/Traefik with HTTPS and WebSocket upgrades.
 
+> The bridge server has its own version (`crates/bridge/Cargo.toml`), reported by `--version`, `/health` and the cloud handshake. Docker images are tagged with that version and `latest`; a release tag skips the image build and push when the server version is unchanged. Bump that version to force a rebuild.
+
 ### Linux / macOS one-line install
 
 ```bash
@@ -275,7 +277,7 @@ Pushing a `v*` tag runs `.github/workflows/release.yml`:
 - builds Windows x86_64 / i686, Windows 7, macOS Intel / Apple Silicon, Linux x86_64 / aarch64 and best-effort static musl binaries;
 - creates Windows zip + Inno Setup installer, macOS `.app`, Linux tar.gz;
 - builds the bridge server;
-- builds and pushes the multi-arch `kaiyuan/lanprint-bridge` Docker image;
+- builds and pushes the multi-arch `kaiyuan/lanprint-bridge` image only when the current bridge version is not already on Docker Hub;
 - publishes a GitHub release with every artifact.
 
 Repository secrets:
