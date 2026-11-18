@@ -1003,7 +1003,7 @@ fn refresh_ui(window: &MainWindow, app: &Arc<App>) {
 
     let lang_index = Language::ALL
         .iter()
-        .position(|l| l.code() == cfg.language)
+        .position(|l| *l == cfg.language())
         .unwrap_or(0) as i32;
     window.set_language_index(lang_index);
     window.set_host_password_set(cfg.has_host_password());
