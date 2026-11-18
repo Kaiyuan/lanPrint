@@ -20,12 +20,14 @@ COPY locales ./locales
 RUN cargo build --release -p lanprint-bridge --locked
 
 FROM debian:bookworm-slim
+# hadolint ignore=DL3008
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
-    && useradd --system --uid 10001 --home-dir /data --shell /usr/sbin/nologin lanprint \
+    && groupadd --system --gid 10001 lanprint \
+    && useradd --system --uid 10001 --gid lanprint --home-dir /data --shell /usr/sbin/nologin lanprint \
     && mkdir -p /data \
-    && chown -R lanprint:lanprint /data
+    && chown -R 10001:10001 /data
 
 COPY --from=builder /src/target/release/lanprint-bridge /usr/local/bin/lanprint-bridge
 
@@ -35,7 +37,7 @@ ENV LANPRINT_BRIDGE_ADDR=0.0.0.0:52334 \
 
 VOLUME ["/data"]
 EXPOSE 52334
-USER lanprint
+USER 10001:10001
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD ["/usr/local/bin/lanprint-bridge", "--version"]
 ENTRYPOINT ["/usr/local/bin/lanprint-bridge"]
