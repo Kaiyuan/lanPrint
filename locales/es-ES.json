@@ -174,5 +174,12 @@
   "accent_red": "Rojo",
   "accent_orange": "Naranja",
   "accent_green": "Verde",
-  "accent_graphite": "Grafito"
+  "accent_graphite": "Grafito",
+  "expand": "Expandir",
+  "collapse": "Contraer",
+  "list_all_printers": "Mostrar todas las impresoras",
+  "disconnect_all": "Desconectar todas las impresoras",
+  "all_printers_title": "Todas las impresoras",
+  "no_connected_printers": "No hay impresoras conectadas",
+  "remove_host": "Eliminar host"
 }

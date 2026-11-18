@@ -174,5 +174,12 @@
   "accent_red": "Rot",
   "accent_orange": "Orange",
   "accent_green": "Grün",
-  "accent_graphite": "Graphit"
+  "accent_graphite": "Graphit",
+  "expand": "Erweitern",
+  "collapse": "Einklappen",
+  "list_all_printers": "Alle Drucker auflisten",
+  "disconnect_all": "Alle Drucker trennen",
+  "all_printers_title": "Alle Drucker",
+  "no_connected_printers": "Keine verbundenen Drucker",
+  "remove_host": "Host entfernen"
 }

@@ -2674,6 +2674,7 @@ dependencies = [
  "mdns-sd",
  "open",
  "rand 0.8.8",
+ "raw-window-handle",
  "reqwest",
  "serde",
  "serde_json",
@@ -4658,6 +4659,7 @@ dependencies = [
  "i-slint-renderer-software",
  "once_cell",
  "pin-weak",
+ "raw-window-handle",
  "slint-macros",
  "vtable",
 ]

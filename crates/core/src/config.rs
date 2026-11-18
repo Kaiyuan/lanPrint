@@ -250,7 +250,11 @@ pub struct ConfigStore {
 
 impl ConfigStore {
     pub fn load_or_create(dir: Option<PathBuf>) -> std::io::Result<Arc<Self>> {
+        let custom_dir = dir.is_some();
         let dir = dir.unwrap_or_else(default_config_dir);
+        if !custom_dir {
+            migrate_legacy_config(&dir);
+        }
         fs::create_dir_all(&dir)?;
         let path = dir.join("config.toml");
         let data = if path.exists() {
@@ -368,9 +372,37 @@ impl AppConfig {
 }
 
 pub fn default_config_dir() -> PathBuf {
-    dirs::config_dir()
+    dirs::document_dir()
+        .or_else(dirs::config_dir)
         .unwrap_or_else(|| PathBuf::from("."))
         .join("lanPrint")
+}
+
+/// Older builds stored the configuration under the platform config directory
+/// (`%APPDATA%\lanPrint` on Windows). Copy it to the new Documents location the
+/// first time the new path is used, so upgrades keep their settings.
+fn migrate_legacy_config(new_dir: &Path) {
+    let new_path = new_dir.join("config.toml");
+    if new_path.exists() {
+        return;
+    }
+    let Some(legacy_dir) = dirs::config_dir().map(|dir| dir.join("lanPrint")) else {
+        return;
+    };
+    if legacy_dir == new_dir {
+        return;
+    }
+    let legacy_path = legacy_dir.join("config.toml");
+    if !legacy_path.exists() {
+        return;
+    }
+    if fs::create_dir_all(new_dir).is_ok() && fs::copy(&legacy_path, &new_path).is_ok() {
+        info!(
+            "migrated configuration from {} to {}",
+            legacy_path.display(),
+            new_path.display()
+        );
+    }
 }
 
 pub fn default_data_dir() -> PathBuf {

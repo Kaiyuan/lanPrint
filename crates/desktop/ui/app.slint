@@ -1,7 +1,7 @@
 // lanPrint desktop UI. All user visible strings come from the `L` global so
 // the Rust side can switch language instantly without restarting.
 
-import { ScrollView, Palette } from "std-widgets.slint";
+import { Palette } from "std-widgets.slint";
 
 export global Theme {
     in-out property <int> appearance: 0;
@@ -9,52 +9,43 @@ export global Theme {
     out property <bool> system-dark: Palette.color-scheme == ColorScheme.dark;
     out property <bool> dark: appearance == 0 ? system-dark : appearance == 2;
     pure function accent-color(index: int, dark: bool) -> color {
-        if (index == 1) { return dark ? #BF5AF2 : #AF52DE; }
-        if (index == 2) { return dark ? #FF375F : #FF2D55; }
-        if (index == 3) { return dark ? #FF453A : #FF3B30; }
-        if (index == 4) { return dark ? #FF9F0A : #FF9500; }
-        if (index == 5) { return dark ? #30D158 : #34C759; }
-        if (index == 6) { return dark ? #98989D : #8E8E93; }
-        return dark ? #0A84FF : #007AFF;
+        if (index == 1) { return dark ? #A78BFA : #7C5CFC; }
+        if (index == 2) { return dark ? #F472B6 : #EC4899; }
+        if (index == 3) { return dark ? #F87171 : #EF4444; }
+        if (index == 4) { return dark ? #FBBF24 : #F59E0B; }
+        if (index == 5) { return dark ? #4ADE80 : #22C55E; }
+        if (index == 6) { return dark ? #A1A1AA : #71717A; }
+        return dark ? #60A5FA : #2563EB;
     }
     out property <color> accent: accent-color(accent-index, dark);
-    out property <color> accent-soft: accent.transparentize(dark ? 0.78 : 0.88);
-    out property <color> bg: dark ? #1C1C1E : #F2F2F7;
-    out property <color> toolbar: dark ? #2C2C2E : #FFFFFF;
-    out property <color> sidebar: dark ? #252527 : #F7F7F9;
-    out property <color> panel: dark ? #2C2C2E : #FFFFFF;
-    out property <color> card: dark ? #2C2C2E : #FFFFFF;
-    out property <color> card-hover: dark ? #3A3A3C : #F9F9FB;
-    out property <color> text: dark ? #F5F5F7 : #1D1D1F;
-    out property <color> muted: dark ? #A1A1A6 : #6E6E73;
-    out property <color> tertiary: dark ? #8E8E93 : #8E8E93;
-    out property <color> border: dark ? #3A3A3C : #D9D9DE;
-    out property <color> separator: dark ? #38383A : #E5E5EA;
-    out property <color> control: dark ? #3A3A3C : #FFFFFF;
-    out property <color> control-hover: dark ? #48484A : #F0F0F2;
-    out property <color> control-pressed: dark ? #2C2C2E : #E5E5EA;
-    out property <color> segment-bg: dark ? #3A3A3C : #E9E9ED;
-    out property <color> field: dark ? #1C1C1E : #FFFFFF;
-    out property <color> switch-off: dark ? #48484A : #E5E5EA;
-    out property <color> hover: dark ? #3A3A3C : #ECECF0;
-    out property <color> overlay: dark ? #00000099 : #00000033;
-    out property <color> success: dark ? #30D158 : #34C759;
-    out property <color> warning: dark ? #FF9F0A : #FF9500;
-    out property <color> danger: dark ? #FF453A : #FF3B30;
+    out property <color> accent-soft: accent.transparentize(dark ? 0.82 : 0.90);
+    out property <bool> light: !dark;
+    out property <color> bg: dark ? #0E0E0F : #F5F5F3;
+    out property <color> toolbar: dark ? #171718 : #FFFFFF;
+    out property <color> sidebar: dark ? #1A1A1C : #F9F9F7;
+    out property <color> panel: dark ? #1B1B1D : #FFFFFF;
+    out property <color> card: dark ? #1B1B1D : #FFFFFF;
+    out property <color> card-hover: dark ? #232325 : #FAFAF8;
+    out property <color> text: dark ? #F4F4F2 : #161616;
+    out property <color> muted: dark ? #9C9C98 : #86867F;
+    out property <color> tertiary: dark ? #6F6F6B : #A6A6A0;
+    out property <color> border: dark ? #2B2B2D : #E7E7E2;
+    out property <color> separator: dark ? #252527 : #EFEFEA;
+    out property <color> control: dark ? #242426 : #FFFFFF;
+    out property <color> control-hover: dark ? #2D2D30 : #F5F5F2;
+    out property <color> control-pressed: dark ? #1E1E20 : #ECECE7;
+    out property <color> segment-bg: dark ? #222224 : #F0F0EC;
+    out property <color> field: dark ? #1E1E20 : #FFFFFF;
+    out property <color> switch-off: dark ? #3C3C3E : #E3E3DD;
+    out property <color> hover: dark ? #262628 : #F2F2EE;
+    out property <color> overlay: dark ? #00000099 : #00000038;
+    out property <color> success: dark ? #4ADE80 : #22A85A;
+    out property <color> warning: dark ? #FBBF24 : #E8A317;
+    out property <color> danger: dark ? #F87171 : #E5484D;
     out property <color> on-accent: #FFFFFF;
+    out property <color> shadow: dark ? #00000066 : #00000014;
 }
 
-
-export struct DeviceItem {
-    id: string,
-    name: string,
-    address: string,
-    os: string,
-    online: bool,
-    cloud: bool,
-    printer-count: int,
-    selected: bool,
-}
 
 export struct PrinterItem {
     local-name: string,
@@ -70,8 +61,27 @@ export struct PrinterItem {
     preferences: string,
 }
 
-export struct LocalPrinterItem {
+export struct HostRow {
+    kind: int,
+    id: string,
     name: string,
+    address: string,
+    online: bool,
+    cloud: bool,
+    printer-count: int,
+    expanded: bool,
+    local-name: string,
+    remote-name: string,
+    display-name: string,
+    driver: string,
+    status: string,
+    supports-scan: bool,
+    added: bool,
+    has-password: bool,
+    preferences: string,
+}
+
+export struct LocalPrinterItem {    name: string,
     driver: string,
     status: string,
     supports-scan: bool,
@@ -267,6 +277,13 @@ export global L {
     in-out property <string> accent-orange: "Orange";
     in-out property <string> accent-green: "Green";
     in-out property <string> accent-graphite: "Graphite";
+    in-out property <string> expand: "Expand";
+    in-out property <string> collapse: "Collapse";
+    in-out property <string> list-all-printers: "List all printers";
+    in-out property <string> disconnect-all: "Disconnect all printers";
+    in-out property <string> remove-host: "Remove host";
+    in-out property <string> all-printers-title: "All printers";
+    in-out property <string> no-connected-printers: "No connected printers";
 }
 
 
@@ -299,92 +316,128 @@ component LangButton inherits Rectangle {
     in property <string> text;
     in property <bool> selected;
     callback clicked();
-    height: 30px;
+    height: 34px;
     horizontal-stretch: 1;
-    border-radius: 6px;
-    background: selected ? Theme.accent : Theme.control;
-    border-width: 1px;
-    border-color: selected ? Theme.accent : Theme.border;
-    Text {
-        text: root.text;
-        color: root.selected ? Theme.on-accent : Theme.text;
-        font-size: 11px;
-        horizontal-alignment: center;
-        vertical-alignment: center;
-        width: parent.width;
-        height: parent.height;
-    }
-    TouchArea { clicked => { root.clicked(); } }
-}
-
-component StatusDot inherits Rectangle {
-    in property <bool> online: true;
-    width: 8px;
-    height: 8px;
-    border-radius: 4px;
-    background: online ? Theme.success : Theme.tertiary;
-}
-
-component Badge inherits Rectangle {
-    in property <string> text;
-    in property <color> tone: Theme.control;
-    height: 18px;
     border-radius: 9px;
-    background: tone;
-    width: label.width + 14px;
-    label := Text {
-        x: 7px;
-        text: root.text;
-        color: Theme.on-accent;
-        font-size: 10px;
-        vertical-alignment: center;
-        height: parent.height;
-    }
-}
-
-component TextButton inherits Rectangle {
-    in property <string> text;
-    in property <bool> primary: false;
-    in property <bool> enabled: true;
-    in property <bool> small: false;
-    callback clicked();
-    height: small ? 26px : 30px;
-    min-width: small ? 64px : 82px;
-    border-radius: 7px;
-    border-width: primary ? 0px : 1px;
-    border-color: Theme.border;
-    background: !enabled ? Theme.control-pressed
-        : primary ? (ta.pressed ? Theme.accent.transparentize(0.18) : Theme.accent)
-        : (ta.pressed ? Theme.control-pressed : (ta.has-hover ? Theme.control-hover : Theme.control));
+    background: selected ? Theme.text : Theme.control;
+    border-width: 1px;
+    border-color: selected ? Theme.text : Theme.border;
     Text {
         text: root.text;
-        color: !enabled ? Theme.tertiary : (primary ? Theme.on-accent : Theme.text);
-        font-size: small ? 11px : 12px;
-        font-weight: primary ? 600 : 500;
+        color: root.selected ? Theme.panel : Theme.text;
+        font-size: 12px;
+        font-weight: root.selected ? 600 : 400;
         horizontal-alignment: center;
         vertical-alignment: center;
         width: parent.width;
         height: parent.height;
     }
     ta := TouchArea {
+        clicked => { root.clicked(); }
+    }
+    animate background { duration: 120ms; }
+}
+
+component StatusDot inherits Rectangle {
+    in property <bool> online: true;
+    width: 7px;
+    height: 7px;
+    border-radius: 4px;
+    background: online ? Theme.success : Theme.tertiary;
+}
+
+component Badge inherits Rectangle {
+    in property <string> text;
+    in property <color> tone: Theme.segment-bg;
+    in property <color> foreground: Theme.muted;
+    height: 22px;
+    border-radius: 7px;
+    background: tone;
+    width: label.width + 16px;
+    label := Text {
+        x: 8px;
+        text: root.text;
+        color: root.foreground;
+        font-size: 11px;
+        vertical-alignment: center;
+        height: parent.height;
+    }
+}
+
+component ButtonIcon inherits Rectangle {
+    in property <image> source;
+    in property <color> tint: Theme.text;
+    width: 14px;
+    height: 14px;
+    Image {
+        source: root.source;
+        width: 14px;
+        height: 14px;
+        y: 2px;
+        colorize: root.tint;
+    }
+}
+
+component TextButton inherits Rectangle {
+    in property <string> text;
+    in property <image> icon;
+    in property <bool> has-icon: false;
+    in property <bool> primary: false;
+    in property <bool> enabled: true;
+    in property <bool> small: false;
+    callback clicked();
+    height: small ? 28px : 32px;
+    min-width: small ? 68px : 86px;
+    horizontal-stretch: 0;
+    border-radius: 9px;
+    border-width: primary ? 0px : 1px;
+    border-color: Theme.border;
+    background: !enabled ? Theme.control-pressed
+        : primary ? (ta.pressed ? Theme.accent.transparentize(0.15) : Theme.accent)
+        : (ta.pressed ? Theme.control-pressed : (ta.has-hover ? Theme.control-hover : Theme.control));
+    HorizontalLayout {
+        width: parent.width;
+        height: parent.height;
+        padding-left: small ? 9px : 12px;
+        padding-right: small ? 9px : 12px;
+        spacing: root.has-icon ? 6px : 0px;
+        alignment: center;
+        cross-axis-alignment: center;
+        if root.has-icon : ButtonIcon {
+            source: root.icon;
+            tint: !root.enabled ? Theme.tertiary : (root.primary ? Theme.on-accent : Theme.muted);
+        }
+        Text {
+            text: root.text;
+            color: !enabled ? Theme.tertiary : (primary ? Theme.on-accent : Theme.text);
+            font-size: small ? 11px : 12px;
+            font-weight: primary ? 600 : 500;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+            height: parent.height;
+        }
+    }
+    ta := TouchArea {
         enabled: root.enabled;
         clicked => { root.clicked(); }
     }
     animate background { duration: 120ms; }
+    animate border-color { duration: 120ms; }
 }
 
 component IconButton inherits Rectangle {
     in property <string> text;
     in property <bool> enabled: true;
     callback clicked();
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
     background: ta.has-hover ? Theme.hover : #00000000;
     Text {
         text: root.text;
         color: enabled ? Theme.muted : Theme.tertiary;
-        font-size: 15px;
+        font-size: 16px;
         horizontal-alignment: center;
         vertical-alignment: center;
         width: parent.width;
@@ -397,23 +450,49 @@ component IconButton inherits Rectangle {
     animate background { duration: 100ms; }
 }
 
+component WindowButton inherits Rectangle {
+    in property <image> icon;
+    in property <bool> danger: false;
+    callback clicked();
+    width: 30px;
+    height: 30px;
+    border-radius: 7px;
+    background: ta.pressed ? Theme.control-pressed
+        : ta.has-hover ? (danger ? Theme.danger : Theme.hover) : #00000000;
+    Image {
+        source: root.icon;
+        width: 12px;
+        height: 12px;
+        x: (parent.width - 12px) / 2;
+        y: (parent.height - 12px) / 2 + 1px;
+        colorize: root.danger && ta.has-hover ? #FFFFFF : Theme.muted;
+    }
+    ta := TouchArea {
+        clicked => { root.clicked(); }
+    }
+    animate background { duration: 100ms; }
+}
+
 component Switch inherits Rectangle {
     in property <bool> checked: false;
     in property <bool> enabled: true;
     callback toggled(bool);
-    width: 38px;
-    height: 22px;
-    border-radius: 11px;
+    width: 40px;
+    height: 24px;
+    border-radius: 12px;
     background: checked ? Theme.accent : Theme.switch-off;
     Rectangle {
-        x: checked ? parent.width - 20px : 2px;
+        x: checked ? parent.width - 22px : 2px;
         y: 2px;
-        width: 18px;
-        height: 18px;
-        border-radius: 9px;
+        width: 20px;
+        height: 20px;
+        border-radius: 10px;
         background: #FFFFFF;
         border-width: 0.5px;
         border-color: #00000020;
+        drop-shadow-blur: 1px;
+        drop-shadow-offset-y: 1px;
+        drop-shadow-color: #00000028;
         animate x { duration: 120ms; }
     }
     ta := TouchArea {
@@ -428,14 +507,14 @@ component InputBox inherits Rectangle {
     in property <string> placeholder;
     in property <bool> password: false;
     in property <bool> enabled: true;
-    height: 32px;
-    border-radius: 7px;
+    height: 34px;
+    border-radius: 9px;
     border-width: 1px;
     border-color: input.has-focus ? Theme.accent : Theme.border;
     background: Theme.field;
     input := TextInput {
-        x: 9px;
-        width: parent.width - 18px;
+        x: 11px;
+        width: parent.width - 22px;
         height: parent.height;
         text <=> root.text;
         enabled: root.enabled;
@@ -448,7 +527,7 @@ component InputBox inherits Rectangle {
         vertical-alignment: center;
     }
     if root.text == "" && root.placeholder != "" : Text {
-        x: 10px;
+        x: 12px;
         text: root.placeholder;
         color: Theme.tertiary;
         font-size: 13px;
@@ -462,22 +541,27 @@ component Segmented inherits Rectangle {
     in property <[string]> labels;
     in-out property <int> current: 0;
     callback changed(int);
-    height: 28px;
-    border-radius: 7px;
+    height: 32px;
+    border-radius: 10px;
     background: Theme.segment-bg;
     border-width: 1px;
     border-color: Theme.border;
     HorizontalLayout {
-        padding: 2px;
-        spacing: 2px;
+        padding: 3px;
+        spacing: 3px;
         for label[i] in root.labels : Rectangle {
             horizontal-stretch: 1;
-            border-radius: 5px;
+            border-radius: 7px;
             background: root.current == i ? Theme.panel : #00000000;
+            border-width: root.current == i ? 1px : 0px;
+            border-color: Theme.border;
+            drop-shadow-blur: root.current == i ? 3px : 0px;
+            drop-shadow-offset-y: 1px;
+            drop-shadow-color: Theme.shadow;
             Text {
                 text: label;
                 color: root.current == i ? Theme.text : Theme.muted;
-                font-size: 11px;
+                font-size: 12px;
                 font-weight: root.current == i ? 600 : 400;
                 horizontal-alignment: center;
                 vertical-alignment: center;
@@ -496,22 +580,20 @@ component Segmented inherits Rectangle {
 
 component NavItem inherits Rectangle {
     in property <string> label;
-    in property <string> glyph;
+    in property <image> icon;
     in property <bool> selected;
     callback clicked();
-    height: 32px;
-    border-radius: 7px;
-    background: selected ? Theme.accent-soft : (ta.has-hover ? Theme.hover : #00000000);
+    height: 34px;
+    border-radius: 8px;
+    background: selected ? Theme.hover : (ta.has-hover ? Theme.hover : #00000000);
     HorizontalLayout {
         padding-left: 10px;
         padding-right: 10px;
-        spacing: 9px;
-        Text {
-            text: root.glyph;
-            color: selected ? Theme.accent : Theme.muted;
-            font-size: 14px;
-            width: 18px;
-            vertical-alignment: center;
+        spacing: 10px;
+        cross-axis-alignment: center;
+        ButtonIcon {
+            source: root.icon;
+            tint: selected ? Theme.accent : Theme.muted;
         }
         Text {
             text: root.label;
@@ -531,7 +613,74 @@ component Card inherits Rectangle {
     background: Theme.card;
     border-width: 1px;
     border-color: Theme.border;
-    border-radius: 10px;
+    border-radius: 14px;
+    drop-shadow-blur: 10px;
+    drop-shadow-offset-y: 2px;
+    drop-shadow-color: Theme.shadow;
+}
+
+/// Flickable container with a slim overlay scrollbar that matches the app's
+/// rounded, low-contrast visual language.
+component AppScrollView inherits Rectangle {
+    clip: true;
+
+    property <length> max-offset: max(0px, flickable.content-height - flickable.height);
+    property <length> track-height: max(0px, self.height - 12px);
+    property <length> thumb-height: min(
+        track-height,
+        max(28px, track-height * flickable.height / max(flickable.content-height, 1px))
+    );
+    property <bool> scrollable: max-offset > 0px;
+
+    flickable := Flickable {
+        x: 0px;
+        y: 0px;
+        width: parent.width;
+        height: parent.height;
+        interactive: true;
+        @children
+    }
+
+    thumb := Rectangle {
+        x: root.width - 11px;
+        y: 6px + (track-height - thumb-height) * clamp(-flickable.content-y / max(1px, max-offset), 0, 1);
+        width: 6px;
+        height: root.thumb-height;
+        border-radius: 3px;
+        background: bar.has-hover || bar.pressed
+            ? Theme.text.transparentize(0.4)
+            : Theme.text.transparentize(0.65);
+        visible: root.scrollable;
+        animate background { duration: 120ms; }
+    }
+
+    bar := TouchArea {
+        x: parent.width - 16px;
+        y: 0px;
+        width: 16px;
+        height: parent.height;
+        enabled: root.scrollable;
+        property <length> start-mouse: 0px;
+        property <length> start-content: 0px;
+
+        pointer-event(event) => {
+            if (event.button == PointerEventButton.left && event.kind == PointerEventKind.down) {
+                self.start-mouse = self.mouse-y;
+                self.start-content = flickable.content-y;
+            }
+        }
+
+        moved => {
+            if (self.pressed && root.max-offset > 0px) {
+                let factor = root.max-offset / max(1px, root.track-height - root.thumb-height);
+                flickable.content-y = clamp(
+                    self.start-content - (self.mouse-y - self.start-mouse) * factor,
+                    -root.max-offset,
+                    0px
+                );
+            }
+        }
+    }
 }
 
 component SectionTitle inherits Text {
@@ -547,13 +696,17 @@ component MutedText inherits Text {
 
 export component MainWindow inherits Window {
     title: "lanPrint";
-    width: 1080px;
-    height: 740px;
+    no-frame: true;
+    resize-border-width: 6px;
+    preferred-width: 640px;
+    preferred-height: 740px;
+    min-width: 520px;
+    min-height: 620px;
     background: Theme.bg;
     icon: @image-url("assets/lanprint-icon.png");
 
-    in-out property <[DeviceItem]> devices: [];
     in-out property <[PrinterItem]> printers: [];
+    in-out property <[HostRow]> rows: [];
     in-out property <[LocalPrinterItem]> local-printers: [];
     in-out property <[DiscoveryItem]> discoveries: [];
     in-out property <[string]> language-names: ["简体中文", "繁體中文", "English", "Français", "Deutsch", "Italiano", "Español", "日本語", "한국어"];
@@ -561,9 +714,6 @@ export component MainWindow inherits Window {
     in-out property <int> appearance-index: 0;
     in-out property <int> accent-index: 0;
     in-out property <string> selected-device: "";
-    in-out property <string> selected-device-name: "";
-    in-out property <string> selected-device-address: "";
-    in-out property <bool> selected-device-online: false;
     in-out property <bool> busy: false;
     in-out property <string> status-text: "";
     in-out property <string> cloud-status: "";
@@ -593,6 +743,9 @@ export component MainWindow inherits Window {
 
     in-out property <bool> settings-open: false;
     in-out property <int> settings-tab: 0;
+    in-out property <bool> all-printers-open: false;
+    in-out property <string> all-printers-name: "";
+    in-out property <string> all-printers-id: "";
 
     in-out property <bool> password-open: false;
     in-out property <string> password-target: "";
@@ -613,7 +766,10 @@ export component MainWindow inherits Window {
     callback refresh();
     callback open-connect();
     callback open-settings();
-    callback select-device(string);
+    callback minimize-window();
+    callback toggle-expand(string);
+    callback list-all-printers(string);
+    callback disconnect-all(string);
     callback remove-device(string);
     callback add-printer(string, string, string);
     callback remove-printer(string);
@@ -655,219 +811,189 @@ export component MainWindow inherits Window {
     }
 
     // ------------------------------------------------------------------- body
-    HorizontalLayout {
-        y: 56px;
+    Rectangle {
+        y: 64px;
         width: parent.width;
-        height: parent.height - 56px - 28px;
-        spacing: 0;
+        height: parent.height - 64px - 30px;
+        background: Theme.bg;
 
-        // sidebar
-        Rectangle {
-            width: 300px;
+        if root.rows.length == 0 : Rectangle {
+            width: parent.width;
             height: parent.height;
-            background: Theme.sidebar;
-            Rectangle {
-                x: parent.width - 1px;
-                width: 1px;
-                height: parent.height;
-                background: Theme.separator;
-            }
             VerticalLayout {
-                padding: 14px;
-                spacing: 8px;
-                HorizontalLayout {
-                    spacing: 6px;
-                    Text { text: L.nav-devices; color: Theme.muted; font-size: 11px; font-weight: 600; vertical-alignment: center; }
-                    Rectangle { horizontal-stretch: 1; }
-                    IconButton { text: "＋"; clicked => { root.open-connect(); } }
-                }
-                if root.devices.length == 0 : Rectangle {
-                    vertical-stretch: 1;
-                    VerticalLayout {
-                        alignment: center;
-                        spacing: 6px;
-                        Text { text: L.empty-devices-title; color: Theme.muted; font-size: 11px; horizontal-alignment: center; }
+                width: parent.width;
+                height: parent.height;
+                alignment: center;
+                spacing: 12px;
+                Rectangle {
+                    width: parent.width;
+                    height: 72px;
+                    Rectangle {
+                        x: (parent.width - 72px) / 2;
+                        width: 72px;
+                        height: 72px;
+                        border-radius: 18px;
+                        background: Theme.card;
+                        border-width: 1px;
+                        border-color: Theme.border;
+                        drop-shadow-blur: 16px;
+                        drop-shadow-offset-y: 6px;
+                        drop-shadow-color: Theme.shadow;
+                        Image { source: @image-url("assets/lanprint-icon.png"); width: parent.width; height: parent.height; }
                     }
                 }
-                if root.devices.length > 0 : ScrollView {
-                horizontal-scrollbar-policy: ScrollBarPolicy.always-off;
-                    vertical-stretch: 1;
-                    VerticalLayout {
-                        width: parent.width;
-                        spacing: 3px;
-                        for d in root.devices : Rectangle {
-                            height: 58px;
-                            border-radius: 8px;
-                            background: d.selected ? Theme.accent : (touch.has-hover ? Theme.hover : #00000000);
-                            HorizontalLayout {
-                                padding-left: 10px;
-                                padding-right: 10px;
-                                spacing: 9px;
-                                Rectangle {
-                                    width: 30px;
-                                    height: 30px;
-                                    border-radius: 7px;
-                                    background: d.selected ? Theme.on-accent.transparentize(0.82) : Theme.control;
-                                    IconPrinter { x: 3px; y: 3px; tint: d.selected ? Theme.on-accent : (d.online ? Theme.accent : Theme.tertiary); }
-                                }
-                                VerticalLayout {
-                                    spacing: 1px;
-                                    alignment: center;
-                                    Text {
-                                        text: d.name;
-                                        color: d.selected ? Theme.on-accent : Theme.text;
-                                        font-size: 12px;
-                                        font-weight: 600;
-                                        overflow: elide;
-                                    }
-                                    Text {
-                                        text: d.address;
-                                        color: d.selected ? Theme.on-accent.transparentize(0.28) : Theme.muted;
-                                        font-size: 10px;
-                                        overflow: elide;
-                                    }
-                                }
-                                Rectangle { horizontal-stretch: 1; }
-                                StatusDot { online: d.online; }
-                            }
-                            touch := TouchArea { clicked => { root.select-device(d.id); } }
-                        }
+                Text { text: L.empty-devices-title; color: Theme.text; font-size: 17px; font-weight: 600; horizontal-alignment: center; width: parent.width; }
+                Text {
+                    text: L.empty-devices-desc;
+                    color: Theme.muted;
+                    font-size: 12px;
+                    wrap: word-wrap;
+                    horizontal-alignment: center;
+                    width: parent.width;
+                }
+                Rectangle {
+                    width: parent.width;
+                    height: 32px;
+                    TextButton {
+                        x: (parent.width - 140px) / 2;
+                        width: 140px;
+                        text: L.connect-device;
+                        icon: @image-url("assets/icons/plus-circle.svg");
+                        has-icon: true;
+                        primary: true;
+                        clicked => { root.open-connect(); }
                     }
                 }
             }
         }
 
-        // detail
-        Rectangle {
-            horizontal-stretch: 1;
+        if root.rows.length > 0 : AppScrollView {
+            x: 0px;
+            y: 0px;
+            width: parent.width;
             height: parent.height;
-            background: Theme.bg;
-            if root.selected-device == "" : Rectangle {
+            VerticalLayout {
+                padding-left: 16px;
+                padding-right: 16px;
+                padding-top: 16px;
+                padding-bottom: 20px;
+                spacing: 8px;
                 width: parent.width;
-                height: parent.height;
-                VerticalLayout {
-                    width: parent.width;
-                    height: parent.height;
-                    alignment: center;
-                    spacing: 10px;
-                    Rectangle {
+                alignment: start;
+
+                for row in root.rows : Rectangle {
+                    height: row.kind == 0 ? 76px : 108px;
+                    background: transparent;
+
+                    if row.kind == 0 : Rectangle {
+                        x: 0px;
+                        y: 0px;
                         width: parent.width;
-                        height: 64px;
-                        Rectangle {
-                            x: (parent.width - 64px) / 2;
-                            width: 64px;
-                            height: 64px;
-                            border-radius: 16px;
-                            Image { source: @image-url("assets/lanprint-icon.png"); width: parent.width; height: parent.height; }
-                        }
-                    }
-                    Text { text: L.empty-devices-title; color: Theme.text; font-size: 16px; font-weight: 600; horizontal-alignment: center; width: parent.width; }
-                    Text {
-                        text: L.empty-devices-desc;
-                        color: Theme.muted;
-                        font-size: 12px;
-                        wrap: word-wrap;
-                        horizontal-alignment: center;
-                        width: parent.width;
-                    }
-                    Rectangle {
-                        width: parent.width;
-                        height: 30px;
-                        TextButton { x: (parent.width - 130px) / 2; text: L.connect-device; primary: true; width: 130px; clicked => { root.open-connect(); } }
-                    }
-                }
-            }
-            if root.selected-device != "" : VerticalLayout {
-                padding: 22px;
-                spacing: 16px;
-                HorizontalLayout {
-                    spacing: 12px;
-                    Rectangle {
-                        width: 46px;
-                        height: 46px;
-                        border-radius: 11px;
-                        background: Theme.accent-soft;
-                        IconPrinter { x: 11px; y: 11px; tint: Theme.accent; }
-                    }
-                    VerticalLayout {
-                        spacing: 2px;
-                        alignment: center;
-                        Text { text: root.selected-device-name; color: Theme.text; font-size: 21px; font-weight: 700; }
-                        Text { text: root.selected-device-address; color: Theme.muted; font-size: 11px; }
-                    }
-                    Rectangle { horizontal-stretch: 1; }
-                    HorizontalLayout {
-                        spacing: 5px;
-                        alignment: center;
-                        StatusDot { online: root.selected-device-online; }
-                        Text {
-                            text: root.selected-device-online ? L.device-online : L.device-offline;
-                            color: root.selected-device-online ? Theme.success : Theme.tertiary;
-                            font-size: 11px;
-                            vertical-alignment: center;
-                        }
-                    }
-                    TextButton { text: L.remove; small: true; clicked => { root.remove-device(root.selected-device); } }
-                }
-                Rectangle { height: 1px; background: Theme.separator; }
-                Text { text: L.shared-printers; color: Theme.muted; font-size: 11px; font-weight: 600; }
-                if root.printers.length == 0 : Rectangle {
-                    vertical-stretch: 1;
-                    Text { text: L.no-printers; color: Theme.tertiary; font-size: 12px; horizontal-alignment: center; vertical-alignment: center; }
-                }
-                if root.printers.length > 0 : ScrollView {
-                horizontal-scrollbar-policy: ScrollBarPolicy.always-off;
-                    vertical-stretch: 1;
-                    VerticalLayout {
-                        width: parent.width;
-                        spacing: 10px;
-                        for p in root.printers : Card {
-                            height: 104px;
+                        height: parent.height;
+                        border-radius: 14px;
+                        background: row.expanded ? Theme.card-hover : Theme.card;
+                        border-width: 1px;
+                        border-color: row.expanded ? Theme.accent : Theme.border;
+                        HorizontalLayout {
+                            padding-left: 14px;
+                            padding-right: 14px;
+                            spacing: 12px;
+                            cross-axis-alignment: center;
+                            Rectangle {
+                                width: 40px;
+                                height: 40px;
+                                border-radius: 11px;
+                                background: row.online ? Theme.accent-soft : Theme.control;
+                                IconPrinter { x: 8px; y: 8px; tint: row.online ? Theme.accent : Theme.tertiary; }
+                            }
                             VerticalLayout {
-                                padding: 14px;
-                                spacing: 7px;
-                                HorizontalLayout {
-                                    spacing: 8px;
-                                    Text { text: p.display-name; color: Theme.text; font-size: 14px; font-weight: 600; vertical-alignment: center; }
-                                    if p.supports-scan : Badge { text: L.scan-support; tone: Theme.accent; }
-                                    if p.has-password : Badge { text: "PIN"; tone: Theme.warning; }
-                                    Rectangle { horizontal-stretch: 1; }
-                                    StatusDot { online: p.online; }
-                                    Text {
-                                        text: p.status;
-                                        color: p.online ? Theme.success : Theme.tertiary;
-                                        font-size: 10px;
-                                        vertical-alignment: center;
-                                    }
-                                    if !p.added : TextButton {
-                                        text: L.add-printer;
-                                        primary: true;
-                                        small: true;
-                                        clicked => {
-                                            if p.has-password {
-                                                root.password-target = p.remote-name;
-                                                root.password-kind = 2;
-                                                root.password-title = L.printer-password;
-                                                root.password-input = "";
-                                                root.password-open = true;
-                                            } else {
-                                                root.add-printer(p.device-id, p.remote-name, "");
-                                            }
-                                        }
-                                    }
+                                spacing: 3px;
+                                alignment: center;
+                                Text { text: row.name; color: Theme.text; font-size: 14px; font-weight: 600; overflow: elide; }
+                                Text {
+                                    text: row.expanded && row.printer-count == 0 ? L.no-connected-printers : row.address;
+                                    color: Theme.muted;
+                                    font-size: 11px;
+                                    overflow: elide;
                                 }
-                                Text { text: p.driver; color: Theme.muted; font-size: 11px; overflow: elide; }
-                                HorizontalLayout {
-                                    spacing: 8px;
-                                    Text { text: p.preferences; color: Theme.tertiary; font-size: 10px; vertical-alignment: center; horizontal-stretch: 1; overflow: elide; }
-                                    if p.added : HorizontalLayout {
-                                        spacing: 6px;
-                                        if p.supports-scan : TextButton { text: L.scan; small: true; clicked => { root.open-scan(p.local-name); } }
-                                        TextButton { text: L.print-test; small: true; clicked => { root.test-print(p.local-name); } }
-                                        TextButton { text: L.preferences; small: true; clicked => { root.open-preferences(p.local-name); } }
-                                        TextButton { text: L.remove; small: true; clicked => { root.remove-printer(p.local-name); } }
-                                    }
+                            }
+                            Rectangle { horizontal-stretch: 1; }
+                            if row.cloud : Badge { text: L.device-cloud; }
+                            Badge { text: row.printer-count + " " + L.shared-printers; }
+                            StatusDot { online: row.online; }
+                            ButtonIcon {
+                                source: row.expanded ? @image-url("assets/icons/chevron-down.svg") : @image-url("assets/icons/chevron-right.svg");
+                                tint: Theme.muted;
+                            }
+                        }
+                        TouchArea { clicked => { root.toggle-expand(row.id); } }
+                        ContextMenuArea {
+                            x: 0px;
+                            y: 0px;
+                            width: parent.width;
+                            height: parent.height;
+                            Menu {
+                                MenuItem {
+                                    title: row.expanded ? L.collapse : L.expand;
+                                    icon: row.expanded ? @image-url("assets/icons/chevron-down.svg") : @image-url("assets/icons/chevron-right.svg");
+                                    activated => { root.toggle-expand(row.id); }
                                 }
+                                MenuItem {
+                                    title: L.list-all-printers;
+                                    icon: @image-url("assets/icons/list.svg");
+                                    activated => { root.list-all-printers(row.id); }
+                                }
+                                MenuSeparator { }
+                                MenuItem {
+                                    title: L.disconnect-all;
+                                    icon: @image-url("assets/icons/disconnect.svg");
+                                    activated => { root.disconnect-all(row.id); }
+                                }
+                            }
+                        }
+                    }
+
+                    if row.kind == 1 : Rectangle {
+                        x: 24px;
+                        y: 0px;
+                        width: parent.width - 24px;
+                        height: parent.height;
+                        border-radius: 12px;
+                        background: Theme.card;
+                        border-width: 1px;
+                        border-color: Theme.border;
+                        VerticalLayout {
+                            padding: 14px;
+                            spacing: 10px;
+                            HorizontalLayout {
+                                spacing: 10px;
+                                cross-axis-alignment: center;
+                                Rectangle {
+                                    width: 34px;
+                                    height: 34px;
+                                    border-radius: 9px;
+                                    background: Theme.segment-bg;
+                                    IconPrinter { x: 5px; y: 5px; tint: Theme.accent; }
+                                }
+                                VerticalLayout {
+                                    spacing: 2px;
+                                    alignment: center;
+                                    Text { text: row.display-name; color: Theme.text; font-size: 13px; font-weight: 600; overflow: elide; }
+                                    Text { text: row.driver; color: Theme.muted; font-size: 11px; overflow: elide; }
+                                    Text { text: row.preferences; color: Theme.tertiary; font-size: 10px; overflow: elide; }
+                                }
+                                Rectangle { horizontal-stretch: 1; }
+                                if row.supports-scan : Badge { text: L.scan-support; }
+                                StatusDot { online: row.online; }
+                                Text { text: row.status; color: row.online ? Theme.success : Theme.tertiary; font-size: 11px; vertical-alignment: center; }
+                            }
+                            HorizontalLayout {
+                                spacing: 8px;
+                                Rectangle { horizontal-stretch: 1; }
+                                if row.supports-scan : TextButton { text: L.scan; icon: @image-url("assets/icons/scan.svg"); has-icon: true; small: true; clicked => { root.open-scan(row.local-name); } }
+                                TextButton { text: L.print-test; icon: @image-url("assets/icons/printer.svg"); has-icon: true; small: true; clicked => { root.test-print(row.local-name); } }
+                                TextButton { text: L.preferences; icon: @image-url("assets/icons/sliders.svg"); has-icon: true; small: true; clicked => { root.open-preferences(row.local-name); } }
+                                TextButton { text: L.remove; icon: @image-url("assets/icons/trash.svg"); has-icon: true; small: true; clicked => { root.remove-printer(row.local-name); } }
                             }
                         }
                     }
@@ -881,7 +1007,7 @@ export component MainWindow inherits Window {
         x: 0px;
         y: 0px;
         width: parent.width;
-        height: 56px;
+        height: 64px;
         background: Theme.toolbar;
         Rectangle {
             y: parent.height - 1px;
@@ -889,49 +1015,67 @@ export component MainWindow inherits Window {
             height: 1px;
             background: Theme.separator;
         }
-        HorizontalLayout {
-            x: 0px;
-            y: 0px;
-            width: parent.width;
-            height: 56px;
-            padding-left: 20px;
-            padding-right: 16px;
-            spacing: 10px;
-            Rectangle {
-                width: 30px;
-                height: 30px;
-                border-radius: 7px;
-                Image { source: @image-url("assets/lanprint-icon.png"); width: parent.width; height: parent.height; }
+        WindowMoveArea {
+            HorizontalLayout {
+                x: 0px;
+                y: 0px;
+                width: parent.width;
+                height: parent.height;
+                padding-left: 20px;
+                padding-right: 12px;
+                spacing: 8px;
+                cross-axis-alignment: center;
+                Rectangle {
+                    width: 26px;
+                    height: 26px;
+                    border-radius: 7px;
+                    Image { source: @image-url("assets/lanprint-icon.png"); width: parent.width; height: parent.height; }
+                }
+                if root.width > 600px : Text { text: "lanPrint"; color: Theme.text; font-size: 14px; font-weight: 600; vertical-alignment: center; }
+                Rectangle { horizontal-stretch: 1; }
+                if root.busy : Text { text: "…"; color: Theme.accent; font-size: 15px; vertical-alignment: center; }
+                TextButton { text: L.refresh; icon: @image-url("assets/icons/refresh.svg"); has-icon: true; clicked => { root.refresh(); } }
+                TextButton {
+                    text: L.connect-device;
+                    icon: @image-url("assets/icons/plus-circle.svg");
+                    has-icon: true;
+                    primary: true;
+                    clicked => { root.open-connect(); }
+                }
+                TextButton { text: L.settings; icon: @image-url("assets/icons/gear.svg"); has-icon: true; clicked => { root.open-settings(); } }
+                Rectangle { width: 6px; }
+                WindowButton {
+                    icon: @image-url("assets/icons/win-minimize.svg");
+                    clicked => { root.minimize-window(); }
+                }
+                WindowButton {
+                    icon: root.maximized ? @image-url("assets/icons/win-restore.svg") : @image-url("assets/icons/win-maximize.svg");
+                    clicked => { root.maximized = !root.maximized; }
+                }
+                WindowButton {
+                    icon: @image-url("assets/icons/win-close.svg");
+                    danger: true;
+                    clicked => { root.close(); }
+                }
             }
-            Text { text: "lanPrint"; color: Theme.text; font-size: 16px; font-weight: 700; vertical-alignment: center; }
-            Text { text: "·"; color: Theme.tertiary; font-size: 14px; vertical-alignment: center; }
-            Text { text: L.app-tagline; color: Theme.muted; font-size: 11px; vertical-alignment: center; overflow: elide; }
-            Rectangle { horizontal-stretch: 1; }
-            if root.busy : Text { text: "…"; color: Theme.accent; font-size: 15px; vertical-alignment: center; }
-            TextButton { text: L.refresh; small: true; clicked => { root.refresh(); } }
-            TextButton {
-                text: L.connect-device;
-                primary: true;
-                clicked => { root.open-connect(); }
-            }
-            TextButton { text: L.settings; small: true; clicked => { root.open-settings(); } }
         }
     }
 
     // -------------------------------------------------------------- status bar
     Rectangle {
-        y: parent.height - 28px;
+        y: parent.height - 30px;
         width: parent.width;
-        height: 28px;
+        height: 30px;
         background: Theme.toolbar;
         Rectangle { width: parent.width; height: 1px; background: Theme.separator; }
         HorizontalLayout {
             width: parent.width;
             height: parent.height;
-            padding-left: 14px;
-            padding-right: 14px;
+            padding-left: 16px;
+            padding-right: 16px;
             spacing: 8px;
             alignment: start;
+            cross-axis-alignment: center;
             StatusDot { online: root.status-text != ""; }
             Text { text: root.status-text; color: Theme.muted; font-size: 10px; vertical-alignment: center; }
             if root.share-code != "" : Text { text: L.share-code + ": " + root.share-code; color: Theme.accent; font-size: 10px; vertical-alignment: center; }
@@ -953,11 +1097,14 @@ export component MainWindow inherits Window {
         background: Theme.overlay;
         block := TouchArea { }
         Rectangle {
-            width: 600px;
-            height: 570px;
+            width: Math.min(parent.width - 24px, 600px);
+            height: Math.min(parent.height - 40px, 570px);
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
-            border-radius: 14px;
+            border-radius: 18px;
+            drop-shadow-blur: 32px;
+            drop-shadow-offset-y: 12px;
+            drop-shadow-color: Theme.shadow;
             background: Theme.panel;
             border-width: 1px;
             border-color: Theme.border;
@@ -995,11 +1142,11 @@ export component MainWindow inherits Window {
                             width: parent.width - 30px;
                         }
                     }
-                    if root.discoveries.length > 0 : ScrollView {
-                horizontal-scrollbar-policy: ScrollBarPolicy.always-off;
+                    if root.discoveries.length > 0 : AppScrollView {
                         vertical-stretch: 1;
                         VerticalLayout {
                             width: parent.width;
+                            padding-right: 10px;
                             spacing: 7px;
                             for d in root.discoveries : Card {
                                 height: 58px;
@@ -1016,7 +1163,7 @@ export component MainWindow inherits Window {
                                         Text { text: d.address + " · " + d.os + " · v" + d.version; color: Theme.muted; font-size: 10px; }
                                     }
                                     Rectangle { horizontal-stretch: 1; }
-                                    if d.cloud : Badge { text: L.device-cloud; tone: Theme.accent; }
+                                    if d.cloud : Badge { text: L.device-cloud; tone: Theme.accent; foreground: Theme.on-accent; }
                                     TextButton {
                                         text: L.connect;
                                         small: true;
@@ -1032,7 +1179,7 @@ export component MainWindow inherits Window {
                             }
                         }
                     }
-                    TextButton { text: L.manual-input; clicked => { root.connect-tab = 1; } }
+                    TextButton { text: L.manual-input; horizontal-stretch: 1; clicked => { root.connect-tab = 1; } }
                 }
                 if root.connect-tab == 1 : VerticalLayout {
                     vertical-stretch: 1;
@@ -1091,11 +1238,14 @@ export component MainWindow inherits Window {
         background: Theme.overlay;
         TouchArea { }
         Rectangle {
-            width: 900px;
-            height: 620px;
+            width: Math.min(parent.width - 24px, 880px);
+            height: Math.min(parent.height - 40px, 620px);
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
-            border-radius: 14px;
+            border-radius: 18px;
+            drop-shadow-blur: 32px;
+            drop-shadow-offset-y: 12px;
+            drop-shadow-color: Theme.shadow;
             background: Theme.panel;
             border-width: 1px;
             border-color: Theme.border;
@@ -1119,28 +1269,28 @@ export component MainWindow inherits Window {
                 HorizontalLayout {
                     vertical-stretch: 1;
                     Rectangle {
-                        width: 196px;
+                        width: 180px;
                         vertical-stretch: 1;
                         background: Theme.sidebar;
                         Rectangle { x: parent.width - 1px; width: 1px; height: parent.height; background: Theme.separator; }
                         VerticalLayout {
                             padding: 12px;
                             spacing: 3px;
-                            NavItem { label: L.general; glyph: "◉"; selected: root.settings-tab == 0; clicked => { root.settings-tab = 0; } }
-                            NavItem { label: L.share-printers; glyph: "▤"; selected: root.settings-tab == 1; clicked => { root.settings-tab = 1; } }
-                            NavItem { label: L.cloud-title; glyph: "◇"; selected: root.settings-tab == 2; clicked => { root.settings-tab = 2; } }
-                            NavItem { label: L.about; glyph: "ⓘ"; selected: root.settings-tab == 3; clicked => { root.settings-tab = 3; } }
+                            NavItem { label: L.general; icon: @image-url("assets/icons/sliders.svg"); selected: root.settings-tab == 0; clicked => { root.settings-tab = 0; } }
+                            NavItem { label: L.share-printers; icon: @image-url("assets/icons/printer.svg"); selected: root.settings-tab == 1; clicked => { root.settings-tab = 1; } }
+                            NavItem { label: L.cloud-title; icon: @image-url("assets/icons/cloud.svg"); selected: root.settings-tab == 2; clicked => { root.settings-tab = 2; } }
+                            NavItem { label: L.about; icon: @image-url("assets/icons/info.svg"); selected: root.settings-tab == 3; clicked => { root.settings-tab = 3; } }
                             Rectangle { vertical-stretch: 1; }
                             MutedText { text: "lanPrint " + root.version-text; }
                         }
                     }
-                    ScrollView {
-                horizontal-scrollbar-policy: ScrollBarPolicy.always-off;
+                    AppScrollView {
                         horizontal-stretch: 1;
                         VerticalLayout {
-                            padding: 24px;
-                            spacing: 16px;
+                            padding: 20px;
+                            spacing: 14px;
                             width: parent.width;
+                            alignment: start;
 
                             if root.settings-tab == 0 : VerticalLayout {
                                 spacing: 16px;
@@ -1159,37 +1309,37 @@ export component MainWindow inherits Window {
                                             spacing: 9px;
                                             Text { text: L.accent-color; color: Theme.muted; font-size: 11px; vertical-alignment: center; }
                                             Rectangle {
-                                                width: 24px; height: 24px; border-radius: 12px; background: #007AFF;
+                                                width: 24px; height: 24px; border-radius: 12px; background: #2563EB;
                                                 border-width: root.accent-index == 0 ? 3px : 1px; border-color: root.accent-index == 0 ? Theme.text : Theme.border;
                                                 TouchArea { clicked => { root.accent-index = 0; root.accent-changed(0); } }
                                             }
                                             Rectangle {
-                                                width: 24px; height: 24px; border-radius: 12px; background: #AF52DE;
+                                                width: 24px; height: 24px; border-radius: 12px; background: #7C5CFC;
                                                 border-width: root.accent-index == 1 ? 3px : 1px; border-color: root.accent-index == 1 ? Theme.text : Theme.border;
                                                 TouchArea { clicked => { root.accent-index = 1; root.accent-changed(1); } }
                                             }
                                             Rectangle {
-                                                width: 24px; height: 24px; border-radius: 12px; background: #FF2D55;
+                                                width: 24px; height: 24px; border-radius: 12px; background: #EC4899;
                                                 border-width: root.accent-index == 2 ? 3px : 1px; border-color: root.accent-index == 2 ? Theme.text : Theme.border;
                                                 TouchArea { clicked => { root.accent-index = 2; root.accent-changed(2); } }
                                             }
                                             Rectangle {
-                                                width: 24px; height: 24px; border-radius: 12px; background: #FF3B30;
+                                                width: 24px; height: 24px; border-radius: 12px; background: #EF4444;
                                                 border-width: root.accent-index == 3 ? 3px : 1px; border-color: root.accent-index == 3 ? Theme.text : Theme.border;
                                                 TouchArea { clicked => { root.accent-index = 3; root.accent-changed(3); } }
                                             }
                                             Rectangle {
-                                                width: 24px; height: 24px; border-radius: 12px; background: #FF9500;
+                                                width: 24px; height: 24px; border-radius: 12px; background: #F59E0B;
                                                 border-width: root.accent-index == 4 ? 3px : 1px; border-color: root.accent-index == 4 ? Theme.text : Theme.border;
                                                 TouchArea { clicked => { root.accent-index = 4; root.accent-changed(4); } }
                                             }
                                             Rectangle {
-                                                width: 24px; height: 24px; border-radius: 12px; background: #34C759;
+                                                width: 24px; height: 24px; border-radius: 12px; background: #22C55E;
                                                 border-width: root.accent-index == 5 ? 3px : 1px; border-color: root.accent-index == 5 ? Theme.text : Theme.border;
                                                 TouchArea { clicked => { root.accent-index = 5; root.accent-changed(5); } }
                                             }
                                             Rectangle {
-                                                width: 24px; height: 24px; border-radius: 12px; background: #8E8E93;
+                                                width: 24px; height: 24px; border-radius: 12px; background: #71717A;
                                                 border-width: root.accent-index == 6 ? 3px : 1px; border-color: root.accent-index == 6 ? Theme.text : Theme.border;
                                                 TouchArea { clicked => { root.accent-index = 6; root.accent-changed(6); } }
                                             }
@@ -1271,17 +1421,19 @@ export component MainWindow inherits Window {
                                     HorizontalLayout {
                                         padding: 14px;
                                         spacing: 10px;
+                                        cross-axis-alignment: center;
                                         Rectangle {
                                             width: 36px; height: 36px; border-radius: 8px; background: Theme.control;
                                             IconPrinter { x: 6px; y: 6px; tint: lp.shared ? Theme.accent : Theme.muted; }
                                         }
                                         VerticalLayout {
-                                            spacing: 2px; alignment: center;
-                                            Text { text: lp.name; color: Theme.text; font-size: 12px; font-weight: 600; }
+                                            spacing: 2px;
+                                            alignment: center;
+                                            horizontal-stretch: 1;
+                                            Text { text: lp.name; color: Theme.text; font-size: 12px; font-weight: 600; overflow: elide; }
                                             Text { text: lp.driver + " · " + lp.status; color: Theme.muted; font-size: 10px; overflow: elide; }
                                         }
-                                        Rectangle { horizontal-stretch: 1; }
-                                        if lp.shared : Badge { text: lp.has-password ? "PIN" : L.shared; tone: Theme.accent; }
+                                        if lp.shared : Badge { text: lp.has-password ? "PIN" : L.shared; tone: Theme.accent; foreground: Theme.on-accent; }
                                         TextButton {
                                             text: L.printer-password;
                                             small: true;
@@ -1382,6 +1534,106 @@ export component MainWindow inherits Window {
         }
     }
 
+    // -------------------------------------------------------- all printers sheet
+    if root.all-printers-open : Rectangle {
+        width: parent.width;
+        height: parent.height;
+        background: Theme.overlay;
+        TouchArea { }
+        Rectangle {
+            width: Math.min(parent.width - 24px, 620px);
+            height: Math.min(parent.height - 40px, 600px);
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            border-radius: 18px;
+            drop-shadow-blur: 32px;
+            drop-shadow-offset-y: 12px;
+            drop-shadow-color: Theme.shadow;
+            background: Theme.panel;
+            border-width: 1px;
+            border-color: Theme.border;
+            VerticalLayout {
+                padding: 20px;
+                spacing: 12px;
+                HorizontalLayout {
+                    spacing: 8px;
+                    Image { source: @image-url("assets/icons/list.svg"); width: 18px; height: 18px; colorize: Theme.accent; }
+                    Text { text: L.all-printers-title + " · " + root.all-printers-name; color: Theme.text; font-size: 17px; font-weight: 600; overflow: elide; }
+                    Rectangle { horizontal-stretch: 1; }
+                    IconButton { text: "×"; clicked => { root.all-printers-open = false; } }
+                }
+                if root.printers.length == 0 : Rectangle {
+                    vertical-stretch: 1;
+                    Text { text: L.no-printers; color: Theme.tertiary; font-size: 12px; horizontal-alignment: center; vertical-alignment: center; }
+                }
+                if root.printers.length > 0 : AppScrollView {
+                    vertical-stretch: 1;
+                    VerticalLayout {
+                        width: parent.width;
+                        spacing: 8px;
+                        for p in root.printers : Rectangle {
+                            height: 68px;
+                            border-radius: 9px;
+                            background: Theme.card;
+                            border-width: 1px;
+                            border-color: Theme.border;
+                            HorizontalLayout {
+                                padding: 12px;
+                                spacing: 10px;
+                                cross-axis-alignment: center;
+                                Rectangle {
+                                    width: 32px; height: 32px; border-radius: 8px; background: Theme.control;
+                                    IconPrinter { x: 4px; y: 4px; tint: p.online ? Theme.accent : Theme.tertiary; }
+                                }
+                                VerticalLayout {
+                                    spacing: 2px; alignment: center;
+                                    Text { text: p.display-name; color: Theme.text; font-size: 12px; font-weight: 600; overflow: elide; }
+                                    Text { text: p.driver; color: Theme.muted; font-size: 10px; overflow: elide; }
+                                }
+                                Rectangle { horizontal-stretch: 1; }
+                                if p.has-password : Badge { text: "PIN"; tone: Theme.warning; foreground: Theme.on-accent; }
+                                StatusDot { online: p.online; }
+                                if p.added : Badge { text: L.added; tone: Theme.segment-bg; }
+                                if !p.added : TextButton {
+                                    text: L.add-printer;
+                                    icon: @image-url("assets/icons/plus.svg");
+                                    has-icon: true;
+                                    primary: true;
+                                    small: true;
+                                    clicked => {
+                                        if p.has-password {
+                                            root.password-target = p.remote-name;
+                                            root.password-kind = 2;
+                                            root.password-title = L.printer-password;
+                                            root.password-input = "";
+                                            root.password-open = true;
+                                        } else {
+                                            root.add-printer(p.device-id, p.remote-name, "");
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                HorizontalLayout {
+                    spacing: 8px;
+                    Rectangle { horizontal-stretch: 1; }
+                    TextButton {
+                        text: L.remove-host;
+                        icon: @image-url("assets/icons/trash.svg");
+                        has-icon: true;
+                        horizontal-stretch: 0;
+                        clicked => {
+                            root.all-printers-open = false;
+                            root.remove-device(root.all-printers-id);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // --------------------------------------------------------- password sheet
     if root.password-open : Rectangle {
         width: parent.width;
@@ -1393,7 +1645,10 @@ export component MainWindow inherits Window {
             height: 246px;
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
-            border-radius: 13px;
+            border-radius: 18px;
+            drop-shadow-blur: 32px;
+            drop-shadow-offset-y: 12px;
+            drop-shadow-color: Theme.shadow;
             background: Theme.panel;
             border-width: 1px;
             border-color: Theme.border;
@@ -1429,7 +1684,10 @@ export component MainWindow inherits Window {
             height: 410px;
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
-            border-radius: 13px;
+            border-radius: 18px;
+            drop-shadow-blur: 32px;
+            drop-shadow-offset-y: 12px;
+            drop-shadow-color: Theme.shadow;
             background: Theme.panel;
             border-width: 1px;
             border-color: Theme.border;
@@ -1486,7 +1744,10 @@ export component MainWindow inherits Window {
             height: 390px;
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
-            border-radius: 14px;
+            border-radius: 20px;
+            drop-shadow-blur: 40px;
+            drop-shadow-offset-y: 16px;
+            drop-shadow-color: Theme.shadow;
             background: Theme.panel;
             border-width: 1px;
             border-color: Theme.border;

@@ -174,5 +174,12 @@
   "accent_red": "紅色",
   "accent_orange": "橙色",
   "accent_green": "綠色",
-  "accent_graphite": "石墨色"
+  "accent_graphite": "石墨色",
+  "expand": "展開",
+  "collapse": "收起",
+  "list_all_printers": "列出所有印表機",
+  "disconnect_all": "中斷所有印表機",
+  "all_printers_title": "所有印表機",
+  "no_connected_printers": "尚無已連線的印表機",
+  "remove_host": "移除主機"
 }

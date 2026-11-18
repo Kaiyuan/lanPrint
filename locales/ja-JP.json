@@ -174,5 +174,12 @@
   "accent_red": "レッド",
   "accent_orange": "オレンジ",
   "accent_green": "グリーン",
-  "accent_graphite": "グラファイト"
+  "accent_graphite": "グラファイト",
+  "expand": "展開",
+  "collapse": "折りたたむ",
+  "list_all_printers": "すべてのプリンターを表示",
+  "disconnect_all": "すべてのプリンターを切断",
+  "all_printers_title": "すべてのプリンター",
+  "no_connected_printers": "接続されたプリンターはありません",
+  "remove_host": "ホストを削除"
 }

@@ -174,5 +174,12 @@
   "accent_red": "빨강",
   "accent_orange": "주황",
   "accent_green": "초록",
-  "accent_graphite": "그래파이트"
+  "accent_graphite": "그래파이트",
+  "expand": "펼치기",
+  "collapse": "접기",
+  "list_all_printers": "모든 프린터 나열",
+  "disconnect_all": "모든 프린터 연결 해제",
+  "all_printers_title": "모든 프린터",
+  "no_connected_printers": "연결된 프린터가 없습니다",
+  "remove_host": "호스트 제거"
 }

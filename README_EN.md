@@ -98,6 +98,8 @@ The installer adds the binary, desktop entry, icon and CUPS backend symlink. On 
 
 ## Usage
 
+> Desktop settings are stored in `lanPrint/config.toml` inside your **Documents** folder on every platform. Existing settings under `%APPDATA%\lanPrint` are copied across on first start.
+
 ### Host
 
 1. **Settings → General**: set a host access code.
@@ -110,7 +112,7 @@ The installer adds the binary, desktop entry, icon and CUPS backend symlink. On 
 
 1. Click **Connect device** to scan the LAN, or **Enter manually** to type a host name/IP and code.
 2. **Test connection**, then **Save**.
-3. Select the host, browse shared printers and click **Add**.
+3. Hosts are shown as a single column. Click a host to expand its connected printers; right-click it to expand/collapse, list all printers, or disconnect all printers. The chevron shows the expanded state.
 4. The queue appears in the system print dialog. Use **Test print** to verify.
 5. All-in-one printers show a **Scan** button with resolution, colour and source options.
 

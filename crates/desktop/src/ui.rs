@@ -1,9 +1,13 @@
+use std::cell::RefCell;
+use std::collections::HashSet;
 use std::sync::mpsc::Receiver;
 use std::sync::Arc;
 use std::time::Duration;
 
 use lanprint_core::i18n::Translations;
-use lanprint_core::{AppConfig, DiscoveredDevice, Language, ScanRequest, SharedPrinter};
+use lanprint_core::{
+    AppConfig, ClientPrinter, DiscoveredDevice, Language, ScanRequest, SharedPrinter,
+};
 use slint::{CloseRequestResponse, ComponentHandle, ModelRc, Timer, TimerMode, VecModel};
 
 use crate::app::{App, AppEvent};
@@ -13,6 +17,44 @@ use crate::platform;
 
 slint::include_modules!();
 
+thread_local! {
+    static EXPANDED_DEVICES: RefCell<HashSet<String>> = RefCell::new(HashSet::new());
+}
+
+/// Windows 11 rounds decorated windows automatically; frameless windows need
+/// to opt in through DWM. Extending the frame by one pixel also lets DWM draw
+/// the standard window shadow around the borderless window.
+#[cfg(windows)]
+fn apply_window_effects(window: &MainWindow) {
+    use raw_window_handle::{HasWindowHandle, RawWindowHandle};
+
+    let handle = window.window().window_handle();
+    let Ok(raw) = handle.window_handle() else {
+        return;
+    };
+    let RawWindowHandle::Win32(win32) = raw.as_raw() else {
+        return;
+    };
+    let hwnd = win32.hwnd.get() as winapi::shared::windef::HWND;
+    unsafe {
+        let margins = winapi::um::uxtheme::MARGINS {
+            cxLeftWidth: 1,
+            cxRightWidth: 1,
+            cyTopHeight: 1,
+            cyBottomHeight: 1,
+        };
+        winapi::um::dwmapi::DwmExtendFrameIntoClientArea(hwnd, &margins);
+
+        let preference: i32 = 2; // DWMWCP_ROUND
+        winapi::um::dwmapi::DwmSetWindowAttribute(
+            hwnd,
+            33, // DWMWA_WINDOW_CORNER_PREFERENCE
+            &preference as *const _ as *const _,
+            std::mem::size_of::<i32>() as u32,
+        );
+    }
+}
+
 pub fn run(
     app: Arc<App>,
     events: Receiver<AppEvent>,
@@ -21,6 +63,8 @@ pub fn run(
     settings_tab: i32,
 ) -> Result<(), slint::PlatformError> {
     let window = MainWindow::new()?;
+    #[cfg(windows)]
+    apply_window_effects(&window);
     let tray = TrayIcon::new()?;
     let cfg = app.config.read();
     let language = cfg.language();
@@ -129,17 +173,82 @@ fn wire_callbacks(window: &MainWindow, tray: &TrayIcon, app: &Arc<App>) {
         }
     });
 
-    window.on_select_device({
+    window.on_minimize_window({
+        let weak = weak.clone();
+        move || {
+            if let Some(window) = weak.upgrade() {
+                window.window().set_minimized(true);
+            }
+        }
+    });
+
+    window.on_toggle_expand({
+        let app = app.clone();
+        let weak = weak.clone();
+        move |id| {
+            let id = id.to_string();
+            let expanded_now = EXPANDED_DEVICES.with(|expanded| {
+                let mut set = expanded.borrow_mut();
+                if set.remove(&id) {
+                    false
+                } else {
+                    set.insert(id.clone());
+                    true
+                }
+            });
+            if let Some(window) = weak.upgrade() {
+                refresh_ui(&window, &app);
+            }
+            if expanded_now {
+                let app = app.clone();
+                crate::runtime::spawn(async move {
+                    if let Err(err) = app.refresh_device(&id).await {
+                        tracing::debug!("refresh device {id}: {err}");
+                    }
+                });
+            }
+        }
+    });
+
+    window.on_list_all_printers({
         let app = app.clone();
         let weak = weak.clone();
         move |id| {
             let Some(window) = weak.upgrade() else { return };
+            let id = id.to_string();
+            let name = app
+                .config
+                .read()
+                .remote_devices
+                .iter()
+                .find(|d| d.id == id)
+                .map(|d| d.name.clone())
+                .unwrap_or_default();
             window.set_selected_device(id.clone().into());
+            window.set_all_printers_id(id.clone().into());
+            window.set_all_printers_name(name.into());
+            window.set_all_printers_open(true);
+            EXPANDED_DEVICES.with(|expanded| {
+                expanded.borrow_mut().insert(id.clone());
+            });
             let app = app.clone();
             crate::runtime::spawn(async move {
                 if let Err(err) = app.refresh_device(&id).await {
-                    tracing::debug!("refresh device {id}: {err}");
+                    tracing::debug!("refresh all printers: {err}");
                 }
+            });
+        }
+    });
+
+    window.on_disconnect_all({
+        let app = app.clone();
+        let weak = weak.clone();
+        move |id| {
+            let Some(window) = weak.upgrade() else { return };
+            let id = id.to_string();
+            run_async(&window, app.clone(), {
+                let app = app.clone();
+                async move { app.disconnect_all_printers(&id).await }
             });
         }
     });
@@ -149,8 +258,11 @@ fn wire_callbacks(window: &MainWindow, tray: &TrayIcon, app: &Arc<App>) {
         let weak = weak.clone();
         move |id| {
             let Some(window) = weak.upgrade() else { return };
-            window.set_selected_device("".into());
             let id = id.to_string();
+            EXPANDED_DEVICES.with(|expanded| {
+                expanded.borrow_mut().remove(&id);
+            });
+            window.set_selected_device("".into());
             run_async(&window, app.clone(), {
                 let app = app.clone();
                 async move { app.remove_device(id).await }
@@ -357,11 +469,11 @@ fn wire_callbacks(window: &MainWindow, tray: &TrayIcon, app: &Arc<App>) {
                         window.set_connect_testing(false);
                         match result {
                             Ok(device) => {
+                                EXPANDED_DEVICES.with(|expanded| {
+                                    expanded.borrow_mut().insert(device.id.clone());
+                                });
                                 window.set_connect_open(false);
                                 window.set_selected_device(device.id.clone().into());
-                                window.set_selected_device_name(device.name.clone().into());
-                                window.set_selected_device_address(device.address.clone().into());
-                                window.set_selected_device_online(true);
                                 refresh_ui(&window, &app_inner);
                             }
                             Err(err) => window.set_connect_error(error_text(&window, &err).into()),
@@ -734,44 +846,6 @@ fn refresh_ui(window: &MainWindow, app: &Arc<App>) {
         }
     }
 
-    let devices: Vec<DeviceItem> = cfg
-        .remote_devices
-        .iter()
-        .map(|d| DeviceItem {
-            id: d.id.clone().into(),
-            name: d.name.clone().into(),
-            address: if d.cloud {
-                format!("{} · {}", d.address, d.share_code).into()
-            } else {
-                format!("{}:{}", d.address, d.port).into()
-            },
-            os: d.os.clone().into(),
-            online: d.online,
-            cloud: d.cloud,
-            printer_count: snap
-                .remote_printers
-                .get(&d.id)
-                .map(|p| p.len() as i32)
-                .unwrap_or(0),
-            selected: d.id == selected,
-        })
-        .collect();
-    window.set_devices(ModelRc::new(VecModel::from(devices)));
-
-    if let Some(device) = cfg.remote_devices.iter().find(|d| d.id == selected) {
-        window.set_selected_device_name(device.name.clone().into());
-        window.set_selected_device_address(if device.cloud {
-            format!("{} · {}", device.address, device.share_code).into()
-        } else {
-            format!("{}:{}", device.address, device.port).into()
-        });
-        window.set_selected_device_online(device.online);
-    } else {
-        window.set_selected_device_name("".into());
-        window.set_selected_device_address("".into());
-        window.set_selected_device_online(false);
-    }
-
     let remote: &[SharedPrinter] = snap
         .remote_printers
         .get(&selected)
@@ -812,6 +886,81 @@ fn refresh_ui(window: &MainWindow, app: &Arc<App>) {
         })
         .collect();
     window.set_printers(ModelRc::new(VecModel::from(printers)));
+
+    let expanded = EXPANDED_DEVICES.with(|set| set.borrow().clone());
+    let mut rows = Vec::new();
+    for device in &cfg.remote_devices {
+        let connected: Vec<&ClientPrinter> = cfg
+            .client_printers
+            .iter()
+            .filter(|printer| printer.device_id == device.id)
+            .collect();
+        let is_expanded = expanded.contains(&device.id);
+        let address = if device.cloud {
+            format!("{} · {}", device.address, device.share_code)
+        } else {
+            format!("{}:{}", device.address, device.port)
+        };
+        rows.push(HostRow {
+            kind: 0,
+            id: device.id.clone().into(),
+            name: device.name.clone().into(),
+            address: address.into(),
+            online: device.online,
+            cloud: device.cloud,
+            printer_count: connected.len() as i32,
+            expanded: is_expanded,
+            local_name: "".into(),
+            remote_name: "".into(),
+            display_name: "".into(),
+            driver: "".into(),
+            status: "".into(),
+            supports_scan: false,
+            added: false,
+            has_password: false,
+            preferences: "".into(),
+        });
+        if !is_expanded {
+            continue;
+        }
+        for printer in connected {
+            let shared = snap
+                .remote_printers
+                .get(&device.id)
+                .and_then(|list| list.iter().find(|p| p.name == printer.remote_name));
+            let online =
+                device.online && printer.online && shared.map(|p| p.online).unwrap_or(true);
+            let status = translation_lang(
+                cfg.language(),
+                if online {
+                    "printer_online"
+                } else {
+                    "printer_offline"
+                },
+            );
+            rows.push(HostRow {
+                kind: 1,
+                id: device.id.clone().into(),
+                name: device.name.clone().into(),
+                address: "".into(),
+                online,
+                cloud: device.cloud,
+                printer_count: 0,
+                expanded: false,
+                local_name: printer.local_name.clone().into(),
+                remote_name: printer.remote_name.clone().into(),
+                display_name: printer.display_name.clone().into(),
+                driver: shared.map(|p| p.driver.clone()).unwrap_or_default().into(),
+                status: status.into(),
+                supports_scan: printer.supports_scan
+                    || shared.map(|p| p.supports_scan).unwrap_or(false),
+                added: true,
+                has_password: shared.map(|p| p.has_password).unwrap_or(false),
+                preferences: preferences_text(&printer.preferences),
+            });
+        }
+    }
+    window.set_rows(ModelRc::new(VecModel::from(rows)));
 
     let locals: Vec<LocalPrinterItem> = snap
         .local_printers
@@ -1199,5 +1348,12 @@ fn apply_language(window: &MainWindow, language: Language) {
         set_accent_orange = "accent_orange",
         set_accent_green = "accent_green",
         set_accent_graphite = "accent_graphite",
+        set_expand = "expand",
+        set_collapse = "collapse",
+        set_list_all_printers = "list_all_printers",
+        set_disconnect_all = "disconnect_all",
+        set_remove_host = "remove_host",
+        set_all_printers_title = "all_printers_title",
+        set_no_connected_printers = "no_connected_printers",
     );
 }

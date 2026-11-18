@@ -660,6 +660,25 @@ impl App {
         Ok(cp)
     }
 
+    /// Remove every virtual printer that belongs to a host. The host itself is
+    /// kept in the device list so it can be expanded again later.
+    pub async fn disconnect_all_printers(self: &Arc<Self>, device_id: &str) -> Result<()> {
+        let locals: Vec<String> = self
+            .config
+            .read()
+            .client_printers
+            .iter()
+            .filter(|p| p.device_id == device_id)
+            .map(|p| p.local_name.clone())
+            .collect();
+        for local in locals {
+            if let Err(err) = self.remove_printer(local).await {
+                warn!("could not disconnect printer: {err}");
+            }
+        }
+        Ok(())
+    }
+
     pub async fn remove_printer(self: &Arc<Self>, local_name: String) -> Result<()> {
         let cp = self
             .config
