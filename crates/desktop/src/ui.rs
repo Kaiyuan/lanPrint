@@ -19,21 +19,22 @@ slint::include_modules!();
 
 thread_local! {
     static EXPANDED_DEVICES: RefCell<HashSet<String>> = RefCell::new(HashSet::new());
+    static WINDOW_EFFECTS_APPLIED: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
 
 /// Windows 11 rounds decorated windows automatically; frameless windows need
 /// to opt in through DWM. Extending the frame by one pixel also lets DWM draw
 /// the standard window shadow around the borderless window.
 #[cfg(windows)]
-fn apply_window_effects(window: &MainWindow) {
+fn apply_window_effects(window: &MainWindow) -> bool {
     use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 
     let handle = window.window().window_handle();
     let Ok(raw) = handle.window_handle() else {
-        return;
+        return false;
     };
     let RawWindowHandle::Win32(win32) = raw.as_raw() else {
-        return;
+        return false;
     };
     let hwnd = win32.hwnd.get() as winapi::shared::windef::HWND;
     unsafe {
@@ -53,6 +54,17 @@ fn apply_window_effects(window: &MainWindow) {
             std::mem::size_of::<i32>() as u32,
         );
     }
+    true
+}
+
+#[cfg(windows)]
+fn try_apply_window_effects(window: &MainWindow) {
+    if WINDOW_EFFECTS_APPLIED.with(|applied| applied.get()) || !window.window().is_visible() {
+        return;
+    }
+    if apply_window_effects(window) {
+        WINDOW_EFFECTS_APPLIED.with(|applied| applied.set(true));
+    }
 }
 
 pub fn run(
@@ -63,8 +75,6 @@ pub fn run(
     settings_tab: i32,
 ) -> Result<(), slint::PlatformError> {
     let window = MainWindow::new()?;
-    #[cfg(windows)]
-    apply_window_effects(&window);
     let tray = TrayIcon::new()?;
     let cfg = app.config.read();
     let language = cfg.language();
@@ -95,6 +105,8 @@ pub fn run(
         let Some(window) = weak.upgrade() else {
             return;
         };
+        #[cfg(windows)]
+        try_apply_window_effects(&window);
         while let Ok(event) = events.try_recv() {
             match event {
                 AppEvent::Refresh => refresh_ui(&window, &app_for_timer),
@@ -110,6 +122,15 @@ pub fn run(
 
     if show_window {
         window.show()?;
+    }
+    #[cfg(windows)]
+    {
+        let weak = window.as_weak();
+        Timer::single_shot(Duration::from_millis(30), move || {
+            if let Some(window) = weak.upgrade() {
+                try_apply_window_effects(&window);
+            }
+        });
     }
     tray.show()?;
     slint::run_event_loop()?;
