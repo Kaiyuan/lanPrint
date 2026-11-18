@@ -23,6 +23,10 @@ use tracing::{debug, info};
 use hub::Hub;
 use store::{random_token, HostRecord, Store};
 
+/// The bridge server is versioned independently from the desktop app, so the
+/// Docker image is only rebuilt when this version changes.
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 #[derive(Clone)]
 struct AppState {
     store: Arc<Store>,
@@ -83,7 +87,7 @@ async fn main() {
             "--data" => data_path = args.next().unwrap_or(data_path),
             "--public-url" => public_url = args.next().unwrap_or_default(),
             "--version" | "-v" => {
-                println!("lanprint-bridge {}", lanprint_core::VERSION);
+                println!("lanprint-bridge {}", VERSION);
                 return;
             }
             "--help" | "-h" => {
@@ -93,7 +97,7 @@ async fn main() {
                      LANPRINT_BRIDGE_AUTH_CODE (required)\n  LANPRINT_BRIDGE_DATA (default data/hosts.json)\n  \
                      LANPRINT_BRIDGE_PUBLIC_URL (optional, used in client responses)\n\n\
                      Flags: --addr --auth-code --data --public-url",
-                    lanprint_core::VERSION
+                    VERSION
                 );
                 return;
             }
@@ -144,10 +148,7 @@ async fn main() {
             std::process::exit(2);
         }
     };
-    info!(
-        "lanPrint bridge {} listening on {addr}",
-        lanprint_core::VERSION
-    );
+    info!("lanPrint bridge {} listening on {addr}", VERSION);
     if let Err(err) = axum::serve(
         listener,
         app.into_make_service_with_connect_info::<SocketAddr>(),
@@ -159,7 +160,7 @@ async fn main() {
 }
 
 async fn health() -> Json<serde_json::Value> {
-    Json(json!({"status": "ok", "version": lanprint_core::VERSION, "service": "lanprint-bridge"}))
+    Json(json!({"status": "ok", "version": VERSION, "service": "lanprint-bridge"}))
 }
 
 async fn stats(State(state): State<AppState>, headers: HeaderMap) -> Response {
@@ -183,7 +184,7 @@ async fn stats(State(state): State<AppState>, headers: HeaderMap) -> Response {
         "hosts": total,
         "online": connected,
         "connected": connected,
-        "version": lanprint_core::VERSION,
+        "version": VERSION,
     }))
     .into_response()
 }
@@ -237,7 +238,7 @@ async fn register(
         share_code,
         host_token,
         expires_at: now + 30 * 24 * 3600,
-        server_version: lanprint_core::VERSION.to_string(),
+        server_version: VERSION.to_string(),
     })
     .into_response()
 }
