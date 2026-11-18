@@ -61,12 +61,45 @@
       <p data-i18n="docker_desc">The image is published for <code>linux/amd64</code> and <code>linux/arm64</code> on Docker Hub as <code>kaiyuan/lanprint-bridge</code>. The <code>/data</code> volume stores share-code mappings so hosts keep the same code after a restart.</p>
       <div class="note warn" data-i18n="docker_warn">Always put the bridge behind HTTPS before exposing it to the internet. Do not publish port 52334 directly on a public host.</div>
 
-      <h2 id="compose" data-i18n="compose_title">Docker Compose with Caddy</h2>
-      <p data-i18n="compose_desc">The repository contains <code>deploy/docker-compose.yml</code> and <code>deploy/docker-compose.caddy.yml</code>. Caddy obtains a certificate automatically.</p>
-      <pre><code>git clone https://github.com/Kaiyuan/lanPrint.git
+      <h2 id="compose" data-i18n="compose_title">Docker Compose</h2>
+      <p data-i18n="compose_desc">Compose is the recommended way to run the bridge: it restarts automatically, keeps data in a named volume and reads the access code from the environment.</p>
+
+      <h3 data-i18n="compose_plain_title">Bridge only (LAN or behind your own proxy)</h3>
+      <p data-i18n="compose_plain_desc">Use <code>deploy/docker-compose.yml</code> when another reverse proxy already terminates HTTPS, or when you only need the bridge on a trusted network. Compose reads <code>deploy/.env</code> automatically.</p>
+      <pre><code><span class="c"># 1. Clone the repository</span>
+git clone https://github.com/Kaiyuan/lanPrint.git
 cd lanPrint/deploy
-cp docker-compose.caddy.yml docker-compose.override.yml
-<span class="c"># edit the domain and auth code</span>
+
+<span class="c"># 2. Create deploy/.env (code from: openssl rand -base64 24)</span>
+cat &gt; .env &lt;&lt;'EOF'
+LANPRINT_BRIDGE_AUTH_CODE=replace-with-a-long-random-code
+LANPRINT_BRIDGE_PUBLIC_URL=https://bridge.example.com
+EOF
+
+<span class="c"># 3. Start and follow the logs</span>
+docker compose up -d
+docker compose logs -f</code></pre>
+      <p data-i18n="compose_files_desc">The container runs as an unprivileged user, listens on port 52334 and stores share codes in the <code>lanprint-data</code> volume. Keep <code>LANPRINT_BRIDGE_PUBLIC_URL</code> in sync with the public HTTPS address so clients receive the right URL.</p>
+
+      <h3 data-i18n="compose_caddy_title">Bridge + Caddy (automatic HTTPS)</h3>
+      <p data-i18n="compose_caddy_desc"><code>deploy/docker-compose.caddy.yml</code> starts the bridge and Caddy together. Point the domain’s DNS record at the server, then set the domain and server code in the file.</p>
+      <pre><code>cd lanPrint/deploy
+<span class="c"># edit bridge.example.com and LANPRINT_BRIDGE_AUTH_CODE</span>
+docker compose -f docker-compose.caddy.yml up -d
+docker compose -f docker-compose.caddy.yml logs -f</code></pre>
+      <p data-i18n="compose_caddy_note">Only Caddy publishes ports 80 and 443. The bridge stays on the internal Compose network and is not exposed directly; Caddy obtains and renews the certificate.</p>
+
+      <h3 data-i18n="compose_version_title">Versions, updates and backups</h3>
+      <p data-i18n="compose_version_desc">The image is tagged with the bridge version and <code>latest</code>. Pin a version in the compose file for reproducible deployments.</p>
+      <pre><code>services:
+  lanprint-bridge:
+    image: kaiyuan/lanprint-bridge:2.0.0</code></pre>
+      <p data-i18n="compose_update_desc">To update, pull the new image and recreate the container. Share codes live in the named volume, so they survive upgrades; back up that volume with your usual Docker tooling before updating.</p>
+      <pre><code>docker compose pull
+docker compose up -d
+
+<span class="c"># with the Caddy example</span>
+docker compose -f docker-compose.caddy.yml pull
 docker compose -f docker-compose.caddy.yml up -d</code></pre>
 
       <h2 id="script" data-i18n="script_title">One-line install on Linux and macOS</h2>

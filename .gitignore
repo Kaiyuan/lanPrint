@@ -9,6 +9,9 @@ data/
 *.db
 *.toml.tmp
 
+# Compose secrets
+deploy/.env
+
 # Build output
 dist/
 bin/
