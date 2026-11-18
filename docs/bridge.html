@@ -60,6 +60,7 @@
   kaiyuan/lanprint-bridge:latest</code></pre>
       <p data-i18n="docker_desc">The image is published for <code>linux/amd64</code> and <code>linux/arm64</code> on Docker Hub as <code>kaiyuan/lanprint-bridge</code>. The <code>/data</code> volume stores share-code mappings so hosts keep the same code after a restart.</p>
       <div class="note warn" data-i18n="docker_warn">Always put the bridge behind HTTPS before exposing it to the internet. Do not publish port 52334 directly on a public host.</div>
+      <p data-i18n="docker_publish_note">Images are published automatically: a push to main whose bridge version is new builds and pushes kaiyuan/lanprint-bridge tagged with that version and latest. Release tags run the same check and skip the build when the version already exists.</p>
 
       <h2 id="compose" data-i18n="compose_title">Docker Compose</h2>
       <p data-i18n="compose_desc">Compose is the recommended way to run the bridge: it restarts automatically, keeps data in a named volume and reads the access code from the environment.</p>

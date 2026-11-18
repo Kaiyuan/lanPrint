@@ -217,7 +217,7 @@ docker compose up -d
 
 For production use `deploy/docker-compose.caddy.yml` or Nginx/Traefik with HTTPS and WebSocket upgrades.
 
-> The bridge server has its own version (`crates/bridge/Cargo.toml`), reported by `--version`, `/health` and the cloud handshake. Docker images are tagged with that version and `latest`; a release tag skips the image build and push when the server version is unchanged. Bump that version to force a rebuild.
+> The bridge server has its own version (`crates/bridge/Cargo.toml`), reported by `--version`, `/health` and the cloud handshake. Docker images are tagged with that version and `latest`. Pushing to `main` builds and publishes the image automatically when that version is new; a release tag does the same and skips the build when the version is already on Docker Hub. Bump the version to ship a new image.
 
 ### Linux / macOS one-line install
 
@@ -272,12 +272,14 @@ Slint is tri-licensed under GPL-3.0, Royalty-free 2.0 and Software 3.0. This pro
 
 ## Release pipeline
 
+Pushing to `main` runs `.github/workflows/ci.yml`. When the bridge version in `crates/bridge/Cargo.toml` is not on Docker Hub yet, the multi-arch `kaiyuan/lanprint-bridge` image is built and pushed with the version tag and `latest` once the tests and the Docker smoke test pass.
+
 Pushing a `v*` tag runs `.github/workflows/release.yml`:
 
 - builds Windows x86_64 / i686, Windows 7, macOS Intel / Apple Silicon, Linux x86_64 / aarch64 and best-effort static musl binaries;
 - creates Windows zip + Inno Setup installer, macOS `.app`, Linux tar.gz;
 - builds the bridge server;
-- builds and pushes the multi-arch `kaiyuan/lanprint-bridge` image only when the current bridge version is not already on Docker Hub;
+- builds and pushes the same image unless that server version is already published;
 - publishes a GitHub release with every artifact.
 
 Repository secrets:

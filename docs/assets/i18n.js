@@ -199,6 +199,7 @@ const EN = {
   "compose_version_title": "Versions, updates and backups",
   "compose_version_desc": "The image is tagged with the bridge version and latest. Pin a version in the compose file for reproducible deployments.",
   "compose_update_desc": "To update, pull the new image and recreate the container. Share codes live in the named volume, so they survive upgrades; back up that volume with your usual Docker tooling before updating.",
+  "docker_publish_note": "Images are published automatically: a push to main whose bridge version is new builds and pushes kaiyuan/lanprint-bridge tagged with that version and latest. Release tags run the same check and skip the build when the version already exists.",
 };
 
 const ZH = {
@@ -397,6 +398,7 @@ const ZH = {
   "compose_version_title": "版本、更新与备份",
   "compose_version_desc": "镜像同时使用桥接服务版本号和 latest 标签。需要可复现部署时，在 Compose 文件中固定版本号。",
   "compose_update_desc": "更新时拉取新镜像并重建容器。共享码保存在命名卷中，升级不会丢失；升级前请用常用的 Docker 备份方式备份该卷。",
+  "docker_publish_note": "镜像会自动发布：每次推送 main 且桥接服务端版本是新的，就会构建并推送 kaiyuan/lanprint-bridge，并同时打上版本号与 latest 标签；发布 Tag 时使用同一检查，版本已存在则跳过构建。",
 };
 
 const ZH_TW = {
@@ -595,6 +597,7 @@ const ZH_TW = {
   "compose_version_title": "版本、更新與備份",
   "compose_version_desc": "映像同時使用橋接服務版本號與 latest 標籤。需要可重現部署時，在 Compose 檔案中固定版本號。",
   "compose_update_desc": "更新時拉取新映像並重建容器。共享碼保存在具名磁碟區，升級不會遺失；升級前請用慣用的 Docker 備份方式備份該磁碟區。",
+  "docker_publish_note": "映像會自動發布：每次推送 main 且橋接服務端版本是新的，就會建置並推送 kaiyuan/lanprint-bridge，同時標上版本號與 latest；發布 Tag 時使用相同檢查，版本已存在則跳過建置。",
 };
 
 const FR = {
@@ -793,6 +796,7 @@ const FR = {
   "compose_version_title": "Versions, mises à jour et sauvegardes",
   "compose_version_desc": "L’image est étiquetée avec la version du pont et latest. Épinglez une version dans le fichier Compose pour des déploiements reproductibles.",
   "compose_update_desc": "Pour mettre à jour, tirez la nouvelle image et recréez le conteneur. Les codes de partage restent dans le volume nommé et survivent aux mises à jour ; sauvegardez ce volume avec vos outils Docker habituels avant de mettre à jour.",
+  "docker_publish_note": "Les images sont publiées automatiquement : un envoi sur main avec une nouvelle version du pont construit et publie kaiyuan/lanprint-bridge avec le tag de version et latest. Les tags de release utilisent la même vérification et ignorent la construction si la version existe déjà.",
 };
 
 const DE = {
@@ -991,6 +995,7 @@ const DE = {
   "compose_version_title": "Versionen, Updates und Backups",
   "compose_version_desc": "Das Image trägt die Brückenversion und latest. Für reproduzierbare Deployments eine Version in der Compose-Datei festlegen.",
   "compose_update_desc": "Zum Aktualisieren das neue Image ziehen und den Container neu erstellen. Freigabecodes liegen im benannten Volume und überstehen Updates; sichern Sie das Volume vor dem Update mit Ihren üblichen Docker-Werkzeugen.",
+  "docker_publish_note": "Images werden automatisch veröffentlicht: Ein Push auf main mit einer neuen Brückenversion baut und veröffentlicht kaiyuan/lanprint-bridge mit Versions-Tag und latest. Release-Tags nutzen dieselbe Prüfung und überspringen den Build, wenn die Version bereits existiert.",
 };
 
 const IT = {
@@ -1189,6 +1194,7 @@ const IT = {
   "compose_version_title": "Versioni, aggiornamenti e backup",
   "compose_version_desc": "L’immagine è taggata con la versione del bridge e latest. Fissa una versione nel file Compose per distribuzioni riproducibili.",
   "compose_update_desc": "Per aggiornare, scarica la nuova immagine e ricrea il container. I codici di condivisione restano nel volume con nome e sopravvivono agli aggiornamenti; esegui il backup del volume con i tuoi strumenti Docker prima di aggiornare.",
+  "docker_publish_note": "Le immagini vengono pubblicate automaticamente: un push su main con una nuova versione del bridge compila e pubblica kaiyuan/lanprint-bridge con il tag di versione e latest. I tag di release usano lo stesso controllo e saltano la build se la versione esiste già.",
 };
 
 const ES = {
@@ -1387,6 +1393,7 @@ const ES = {
   "compose_version_title": "Versiones, actualizaciones y copias",
   "compose_version_desc": "La imagen se etiqueta con la versión del puente y latest. Fija una versión en el archivo Compose para despliegues reproducibles.",
   "compose_update_desc": "Para actualizar, descarga la nueva imagen y recrea el contenedor. Los códigos de compartición viven en el volumen con nombre y sobreviven a las actualizaciones; haz una copia de ese volumen con tus herramientas Docker habituales antes de actualizar.",
+  "docker_publish_note": "Las imágenes se publican automáticamente: un push a main con una versión nueva del puente compila y publica kaiyuan/lanprint-bridge con la etiqueta de versión y latest. Las etiquetas de release usan la misma comprobación y omiten la compilación si la versión ya existe.",
 };
 
 const JA = {
@@ -1585,6 +1592,7 @@ const JA = {
   "compose_version_title": "バージョン、更新、バックアップ",
   "compose_version_desc": "イメージにはブリッジのバージョンと latest が付きます。再現性のある運用には Compose ファイルでバージョンを固定してください。",
   "compose_update_desc": "更新するには新しいイメージを取得し、コンテナを再作成します。共有コードは名前付きボリュームに残るため更新後も保持されます。更新前に通常の Docker ツールでボリュームをバックアップしてください。",
+  "docker_publish_note": "イメージは自動で公開されます。main へのプッシュでブリッジのバージョンが新しい場合、そのバージョンと latest を付けて kaiyuan/lanprint-bridge をビルド・プッシュします。リリースタグも同じ判定を使い、既に存在するバージョンではビルドを省略します。",
 };
 
 const KO = {
@@ -1783,6 +1791,7 @@ const KO = {
   "compose_version_title": "버전, 업데이트, 백업",
   "compose_version_desc": "이미지는 브리지 버전과 latest 태그를 사용합니다. 재현 가능한 배포를 위해 Compose 파일에 버전을 고정하세요.",
   "compose_update_desc": "업데이트하려면 새 이미지를 받아 컨테이너를 다시 만드세요. 공유 코드는 이름 있는 볼륨에 남아 업데이트 후에도 유지됩니다. 업데이트 전에 평소 사용하는 Docker 도구로 볼륨을 백업하세요.",
+  "docker_publish_note": "이미지는 자동으로 게시됩니다. main에 푸시할 때 브리지 버전이 새 버전이면 해당 버전과 latest 태그로 kaiyuan/lanprint-bridge를 빌드하고 푸시합니다. 릴리스 태그도 같은 검사를 사용하며 버전이 이미 있으면 빌드를 건너뜁니다.",
 };
 
 const I18N = {
