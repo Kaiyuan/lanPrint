@@ -161,5 +161,18 @@
   "preferences_hint": "Uses the preferences shared by the host.",
   "no_jobs": "No print jobs yet",
   "jobs": "Recent jobs",
-  "size": "Size"
+  "size": "Size",
+  "appearance": "Appearance",
+  "appearance_system": "System",
+  "appearance_light": "Light",
+  "appearance_dark": "Dark",
+  "appearance_desc": "Use the system appearance, or choose a light or dark theme.",
+  "accent_color": "Accent color",
+  "accent_blue": "Blue",
+  "accent_purple": "Purple",
+  "accent_pink": "Pink",
+  "accent_red": "Red",
+  "accent_orange": "Orange",
+  "accent_green": "Green",
+  "accent_graphite": "Graphite"
 }

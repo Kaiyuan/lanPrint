@@ -12,5 +12,6 @@ fn main() {
             println!("cargo:warning=could not embed Windows resources: {err}");
         }
     }
-    slint_build::compile("ui/app.slint").expect("failed to compile Slint UI");
+    let config = slint_build::CompilerConfiguration::new().with_style("cupertino".into());
+    slint_build::compile_with_config("ui/app.slint", config).expect("failed to compile Slint UI");
 }

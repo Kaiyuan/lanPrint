@@ -161,5 +161,18 @@
   "preferences_hint": "호스트가 공유한 기본 설정을 사용합니다.",
   "no_jobs": "인쇄 작업이 없습니다",
   "jobs": "최근 작업",
-  "size": "크기"
+  "size": "크기",
+  "appearance": "모양",
+  "appearance_system": "시스템",
+  "appearance_light": "라이트",
+  "appearance_dark": "다크",
+  "appearance_desc": "시스템 모양을 따르거나 라이트/다크 테마를 선택하세요.",
+  "accent_color": "강조 색상",
+  "accent_blue": "파랑",
+  "accent_purple": "보라",
+  "accent_pink": "분홍",
+  "accent_red": "빨강",
+  "accent_orange": "주황",
+  "accent_green": "초록",
+  "accent_graphite": "그래파이트"
 }

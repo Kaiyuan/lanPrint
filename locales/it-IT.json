@@ -161,5 +161,18 @@
   "preferences_hint": "Usa le preferenze condivise dall’host.",
   "no_jobs": "Nessun processo di stampa",
   "jobs": "Processi recenti",
-  "size": "Dimensione"
+  "size": "Dimensione",
+  "appearance": "Aspetto",
+  "appearance_system": "Sistema",
+  "appearance_light": "Chiaro",
+  "appearance_dark": "Scuro",
+  "appearance_desc": "Usa l’aspetto di sistema oppure scegli un tema chiaro o scuro.",
+  "accent_color": "Colore principale",
+  "accent_blue": "Blu",
+  "accent_purple": "Viola",
+  "accent_pink": "Rosa",
+  "accent_red": "Rosso",
+  "accent_orange": "Arancione",
+  "accent_green": "Verde",
+  "accent_graphite": "Grafite"
 }

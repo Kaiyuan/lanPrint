@@ -1,7 +1,49 @@
 // lanPrint desktop UI. All user visible strings come from the `L` global so
 // the Rust side can switch language instantly without restarting.
 
-import { Button, CheckBox, ComboBox, LineEdit, ListView, ScrollView } from "std-widgets.slint";
+import { ScrollView, Palette } from "std-widgets.slint";
+
+export global Theme {
+    in-out property <int> appearance: 0;
+    in-out property <int> accent-index: 0;
+    out property <bool> system-dark: Palette.color-scheme == ColorScheme.dark;
+    out property <bool> dark: appearance == 0 ? system-dark : appearance == 2;
+    pure function accent-color(index: int, dark: bool) -> color {
+        if (index == 1) { return dark ? #BF5AF2 : #AF52DE; }
+        if (index == 2) { return dark ? #FF375F : #FF2D55; }
+        if (index == 3) { return dark ? #FF453A : #FF3B30; }
+        if (index == 4) { return dark ? #FF9F0A : #FF9500; }
+        if (index == 5) { return dark ? #30D158 : #34C759; }
+        if (index == 6) { return dark ? #98989D : #8E8E93; }
+        return dark ? #0A84FF : #007AFF;
+    }
+    out property <color> accent: accent-color(accent-index, dark);
+    out property <color> accent-soft: accent.transparentize(dark ? 0.78 : 0.88);
+    out property <color> bg: dark ? #1C1C1E : #F2F2F7;
+    out property <color> toolbar: dark ? #2C2C2E : #FFFFFF;
+    out property <color> sidebar: dark ? #252527 : #F7F7F9;
+    out property <color> panel: dark ? #2C2C2E : #FFFFFF;
+    out property <color> card: dark ? #2C2C2E : #FFFFFF;
+    out property <color> card-hover: dark ? #3A3A3C : #F9F9FB;
+    out property <color> text: dark ? #F5F5F7 : #1D1D1F;
+    out property <color> muted: dark ? #A1A1A6 : #6E6E73;
+    out property <color> tertiary: dark ? #8E8E93 : #8E8E93;
+    out property <color> border: dark ? #3A3A3C : #D9D9DE;
+    out property <color> separator: dark ? #38383A : #E5E5EA;
+    out property <color> control: dark ? #3A3A3C : #FFFFFF;
+    out property <color> control-hover: dark ? #48484A : #F0F0F2;
+    out property <color> control-pressed: dark ? #2C2C2E : #E5E5EA;
+    out property <color> segment-bg: dark ? #3A3A3C : #E9E9ED;
+    out property <color> field: dark ? #1C1C1E : #FFFFFF;
+    out property <color> switch-off: dark ? #48484A : #E5E5EA;
+    out property <color> hover: dark ? #3A3A3C : #ECECF0;
+    out property <color> overlay: dark ? #00000099 : #00000033;
+    out property <color> success: dark ? #30D158 : #34C759;
+    out property <color> warning: dark ? #FF9F0A : #FF9500;
+    out property <color> danger: dark ? #FF453A : #FF3B30;
+    out property <color> on-accent: #FFFFFF;
+}
+
 
 export struct DeviceItem {
     id: string,
@@ -211,6 +253,93 @@ export global L {
     in-out property <string> no-jobs: "No print jobs yet";
     in-out property <string> jobs: "Recent jobs";
     in-out property <string> size: "Size";
+
+    in-out property <string> appearance: "Appearance";
+    in-out property <string> appearance-system: "System";
+    in-out property <string> appearance-light: "Light";
+    in-out property <string> appearance-dark: "Dark";
+    in-out property <string> appearance-desc: "Use the system appearance, or choose a light or dark theme.";
+    in-out property <string> accent-color: "Accent color";
+    in-out property <string> accent-blue: "Blue";
+    in-out property <string> accent-purple: "Purple";
+    in-out property <string> accent-pink: "Pink";
+    in-out property <string> accent-red: "Red";
+    in-out property <string> accent-orange: "Orange";
+    in-out property <string> accent-green: "Green";
+    in-out property <string> accent-graphite: "Graphite";
+}
+
+
+component IconPrinter inherits Rectangle {
+    in property <color> tint: Theme.text;
+    width: 24px;
+    height: 24px;
+    Rectangle {
+        x: 6px; y: 1px; width: 12px; height: 7px;
+        border-radius: 1px; border-width: 1px; border-color: tint;
+        background: #00000000;
+    }
+    Rectangle {
+        y: 8px; width: 24px; height: 10px;
+        border-radius: 3px; border-width: 1px; border-color: tint;
+        background: tint.transparentize(0.86);
+    }
+    Rectangle {
+        x: 6px; y: 17px; width: 12px; height: 6px;
+        border-radius: 1px; border-width: 1px; border-color: tint;
+        background: Theme.panel;
+    }
+    Rectangle {
+        x: 4px; y: 11px; width: 3px; height: 3px;
+        border-radius: 2px; background: Theme.success;
+    }
+}
+
+component LangButton inherits Rectangle {
+    in property <string> text;
+    in property <bool> selected;
+    callback clicked();
+    height: 30px;
+    horizontal-stretch: 1;
+    border-radius: 6px;
+    background: selected ? Theme.accent : Theme.control;
+    border-width: 1px;
+    border-color: selected ? Theme.accent : Theme.border;
+    Text {
+        text: root.text;
+        color: root.selected ? Theme.on-accent : Theme.text;
+        font-size: 11px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        width: parent.width;
+        height: parent.height;
+    }
+    TouchArea { clicked => { root.clicked(); } }
+}
+
+component StatusDot inherits Rectangle {
+    in property <bool> online: true;
+    width: 8px;
+    height: 8px;
+    border-radius: 4px;
+    background: online ? Theme.success : Theme.tertiary;
+}
+
+component Badge inherits Rectangle {
+    in property <string> text;
+    in property <color> tone: Theme.control;
+    height: 18px;
+    border-radius: 9px;
+    background: tone;
+    width: label.width + 14px;
+    label := Text {
+        x: 7px;
+        text: root.text;
+        color: Theme.on-accent;
+        font-size: 10px;
+        vertical-alignment: center;
+        height: parent.height;
+    }
 }
 
 component TextButton inherits Rectangle {
@@ -219,14 +348,19 @@ component TextButton inherits Rectangle {
     in property <bool> enabled: true;
     in property <bool> small: false;
     callback clicked();
-    height: small ? 28px : 34px;
-    min-width: small ? 60px : 86px;
+    height: small ? 26px : 30px;
+    min-width: small ? 64px : 82px;
     border-radius: 7px;
-    background: !enabled ? #334155 : (primary ? (ta.pressed ? #6d28d9 : (ta.has-hover ? #9f7aea : #8b5cf6)) : (ta.pressed ? #334155 : (ta.has-hover ? #314158 : #273449)));
+    border-width: primary ? 0px : 1px;
+    border-color: Theme.border;
+    background: !enabled ? Theme.control-pressed
+        : primary ? (ta.pressed ? Theme.accent.transparentize(0.18) : Theme.accent)
+        : (ta.pressed ? Theme.control-pressed : (ta.has-hover ? Theme.control-hover : Theme.control));
     Text {
         text: root.text;
-        color: enabled ? #f8fafc : #64748b;
-        font-size: small ? 12px : 13px;
+        color: !enabled ? Theme.tertiary : (primary ? Theme.on-accent : Theme.text);
+        font-size: small ? 11px : 12px;
+        font-weight: primary ? 600 : 500;
         horizontal-alignment: center;
         vertical-alignment: center;
         width: parent.width;
@@ -236,20 +370,21 @@ component TextButton inherits Rectangle {
         enabled: root.enabled;
         clicked => { root.clicked(); }
     }
+    animate background { duration: 120ms; }
 }
 
 component IconButton inherits Rectangle {
     in property <string> text;
     in property <bool> enabled: true;
     callback clicked();
-    width: 34px;
-    height: 34px;
-    border-radius: 7px;
-    background: ta.has-hover ? #314158 : #00000000;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: ta.has-hover ? Theme.hover : #00000000;
     Text {
         text: root.text;
-        color: enabled ? #cbd5e1 : #64748b;
-        font-size: 16px;
+        color: enabled ? Theme.muted : Theme.tertiary;
+        font-size: 15px;
         horizontal-alignment: center;
         vertical-alignment: center;
         width: parent.width;
@@ -259,6 +394,33 @@ component IconButton inherits Rectangle {
         enabled: root.enabled;
         clicked => { root.clicked(); }
     }
+    animate background { duration: 100ms; }
+}
+
+component Switch inherits Rectangle {
+    in property <bool> checked: false;
+    in property <bool> enabled: true;
+    callback toggled(bool);
+    width: 38px;
+    height: 22px;
+    border-radius: 11px;
+    background: checked ? Theme.accent : Theme.switch-off;
+    Rectangle {
+        x: checked ? parent.width - 20px : 2px;
+        y: 2px;
+        width: 18px;
+        height: 18px;
+        border-radius: 9px;
+        background: #FFFFFF;
+        border-width: 0.5px;
+        border-color: #00000020;
+        animate x { duration: 120ms; }
+    }
+    ta := TouchArea {
+        enabled: root.enabled;
+        clicked => { root.toggled(!root.checked); }
+    }
+    animate background { duration: 120ms; }
 }
 
 component InputBox inherits Rectangle {
@@ -266,69 +428,128 @@ component InputBox inherits Rectangle {
     in property <string> placeholder;
     in property <bool> password: false;
     in property <bool> enabled: true;
-    height: 36px;
+    height: 32px;
     border-radius: 7px;
     border-width: 1px;
-    border-color: edit.has-focus ? #8b5cf6 : #334155;
-    background: #0f172a;
-    input := HorizontalLayout {
-        width: parent.width;
+    border-color: input.has-focus ? Theme.accent : Theme.border;
+    background: Theme.field;
+    input := TextInput {
+        x: 9px;
+        width: parent.width - 18px;
         height: parent.height;
-        padding-left: 10px;
-        padding-right: 10px;
-        edit := LineEdit {
-            text <=> root.text;
-            placeholder-text: root.placeholder;
-            enabled: root.enabled;
-            input-type: root.password ? InputType.password : InputType.text;
-            font-size: 13px;
+        text <=> root.text;
+        enabled: root.enabled;
+        input-type: root.password ? InputType.password : InputType.text;
+        color: Theme.text;
+        selection-background-color: Theme.accent;
+        selection-foreground-color: Theme.on-accent;
+        font-size: 13px;
+        single-line: true;
+        vertical-alignment: center;
+    }
+    if root.text == "" && root.placeholder != "" : Text {
+        x: 10px;
+        text: root.placeholder;
+        color: Theme.tertiary;
+        font-size: 13px;
+        vertical-alignment: center;
+        height: parent.height;
+    }
+    animate border-color { duration: 100ms; }
+}
+
+component Segmented inherits Rectangle {
+    in property <[string]> labels;
+    in-out property <int> current: 0;
+    callback changed(int);
+    height: 28px;
+    border-radius: 7px;
+    background: Theme.segment-bg;
+    border-width: 1px;
+    border-color: Theme.border;
+    HorizontalLayout {
+        padding: 2px;
+        spacing: 2px;
+        for label[i] in root.labels : Rectangle {
             horizontal-stretch: 1;
-            height: parent.height;
+            border-radius: 5px;
+            background: root.current == i ? Theme.panel : #00000000;
+            Text {
+                text: label;
+                color: root.current == i ? Theme.text : Theme.muted;
+                font-size: 11px;
+                font-weight: root.current == i ? 600 : 400;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+                width: parent.width;
+                height: parent.height;
+            }
+            ta := TouchArea {
+                clicked => {
+                    root.current = i;
+                    root.changed(i);
+                }
+            }
         }
     }
 }
 
-component StatusDot inherits Rectangle {
-    in property <bool> online: true;
-    width: 8px;
-    height: 8px;
-    border-radius: 4px;
-    background: online ? #22c55e : #64748b;
-}
-
-component Badge inherits Rectangle {
-    in property <string> text;
-    in property <color> tone: #334155;
-    height: 20px;
-    border-radius: 10px;
-    background: tone;
-    width: label.width + 16px;
-    label := Text {
-        x: 8px;
-        text: root.text;
-        color: #e2e8f0;
-        font-size: 10px;
-        vertical-alignment: center;
-        height: parent.height;
+component NavItem inherits Rectangle {
+    in property <string> label;
+    in property <string> glyph;
+    in property <bool> selected;
+    callback clicked();
+    height: 32px;
+    border-radius: 7px;
+    background: selected ? Theme.accent-soft : (ta.has-hover ? Theme.hover : #00000000);
+    HorizontalLayout {
+        padding-left: 10px;
+        padding-right: 10px;
+        spacing: 9px;
+        Text {
+            text: root.glyph;
+            color: selected ? Theme.accent : Theme.muted;
+            font-size: 14px;
+            width: 18px;
+            vertical-alignment: center;
+        }
+        Text {
+            text: root.label;
+            color: root.selected ? Theme.text : Theme.muted;
+            font-size: 12px;
+            font-weight: root.selected ? 600 : 400;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+        }
+    }
+    ta := TouchArea {
+        clicked => { root.clicked(); }
     }
 }
 
+component Card inherits Rectangle {
+    background: Theme.card;
+    border-width: 1px;
+    border-color: Theme.border;
+    border-radius: 10px;
+}
+
 component SectionTitle inherits Text {
-    color: #e2e8f0;
-    font-size: 14px;
+    color: Theme.text;
+    font-size: 13px;
     font-weight: 600;
 }
 
 component MutedText inherits Text {
-    color: #94a3b8;
-    font-size: 12px;
+    color: Theme.muted;
+    font-size: 11px;
 }
 
 export component MainWindow inherits Window {
     title: "lanPrint";
-    width: 1000px;
-    height: 700px;
-    background: #0f172a;
+    width: 1080px;
+    height: 740px;
+    background: Theme.bg;
     icon: @image-url("assets/lanprint-icon.png");
 
     in-out property <[DeviceItem]> devices: [];
@@ -337,6 +558,8 @@ export component MainWindow inherits Window {
     in-out property <[DiscoveryItem]> discoveries: [];
     in-out property <[string]> language-names: ["简体中文", "繁體中文", "English", "Français", "Deutsch", "Italiano", "Español", "日本語", "한국어"];
     in-out property <int> language-index: 0;
+    in-out property <int> appearance-index: 0;
+    in-out property <int> accent-index: 0;
     in-out property <string> selected-device: "";
     in-out property <string> selected-device-name: "";
     in-out property <string> selected-device-address: "";
@@ -404,6 +627,8 @@ export component MainWindow inherits Window {
     callback pick-discovery(string);
     callback close-connect();
     callback language-changed(string);
+    callback appearance-changed(int);
+    callback accent-changed(int);
     callback set-autostart(bool);
     callback set-host-password(string);
     callback share-printer(string, bool);
@@ -429,304 +654,190 @@ export component MainWindow inherits Window {
         triggered => { root.toast-open = false; }
     }
 
-    Rectangle {
+    // ------------------------------------------------------------------- body
+    HorizontalLayout {
+        y: 56px;
         width: parent.width;
-        height: parent.height;
-        background: #0f172a;
+        height: parent.height - 56px - 28px;
+        spacing: 0;
 
-        // ---------- header ----------
+        // sidebar
         Rectangle {
-            x: 0;
-            y: 0;
-            width: parent.width;
-            height: 68px;
-            background: #111c33;
-            border-width: 0;
+            width: 300px;
+            height: parent.height;
+            background: Theme.sidebar;
             Rectangle {
-                x: 0;
-                y: parent.height - 1px;
-                width: parent.width;
-                height: 1px;
-                background: #24344d;
+                x: parent.width - 1px;
+                width: 1px;
+                height: parent.height;
+                background: Theme.separator;
             }
-            HorizontalLayout {
-                padding-left: 22px;
-                padding-right: 18px;
-                spacing: 12px;
-                alignment: start;
-                Rectangle {
-                    width: 36px;
-                    height: 36px;
-                    border-radius: 9px;
-                    Image {
-                        source: @image-url("assets/lanprint-icon.png");
+            VerticalLayout {
+                padding: 14px;
+                spacing: 8px;
+                HorizontalLayout {
+                    spacing: 6px;
+                    Text { text: L.nav-devices; color: Theme.muted; font-size: 11px; font-weight: 600; vertical-alignment: center; }
+                    Rectangle { horizontal-stretch: 1; }
+                    IconButton { text: "＋"; clicked => { root.open-connect(); } }
+                }
+                if root.devices.length == 0 : Rectangle {
+                    vertical-stretch: 1;
+                    VerticalLayout {
+                        alignment: center;
+                        spacing: 6px;
+                        Text { text: L.empty-devices-title; color: Theme.muted; font-size: 11px; horizontal-alignment: center; }
+                    }
+                }
+                if root.devices.length > 0 : ScrollView {
+                horizontal-scrollbar-policy: ScrollBarPolicy.always-off;
+                    vertical-stretch: 1;
+                    VerticalLayout {
                         width: parent.width;
-                        height: parent.height;
-                    }
-                }
-                VerticalLayout {
-                    alignment: center;
-                    spacing: 1px;
-                    Text {
-                        text: L.app-name;
-                        color: #f8fafc;
-                        font-size: 18px;
-                        font-weight: 700;
-                    }
-                    Text {
-                        text: L.app-tagline;
-                        color: #94a3b8;
-                        font-size: 11px;
-                    }
-                }
-                Rectangle { horizontal-stretch: 1; }
-                TextButton {
-                    text: L.refresh;
-                    small: true;
-                    clicked => { root.refresh(); }
-                }
-                TextButton {
-                    text: L.connect-device;
-                    primary: true;
-                    clicked => { root.open-connect(); }
-                }
-                TextButton {
-                    text: L.settings;
-                    clicked => { root.open-settings(); }
-                }
-            }
-        }
-
-        // ---------- body ----------
-        HorizontalLayout {
-            y: 68px;
-            width: parent.width;
-            height: parent.height - 68px - 34px;
-            padding: 16px;
-            spacing: 14px;
-
-            // device column
-            Rectangle {
-                width: 310px;
-                border-radius: 10px;
-                background: #111c33;
-                border-width: 1px;
-                border-color: #24344d;
-                VerticalLayout {
-                    padding: 12px;
-                    spacing: 10px;
-                    HorizontalLayout {
-                        Text { text: L.nav-devices; color: #e2e8f0; font-size: 14px; font-weight: 600; vertical-alignment: center; }
-                        Rectangle { horizontal-stretch: 1; }
-                        if root.busy : Text { text: "…"; color: #22d3ee; font-size: 14px; }
-                    }
-                    if root.devices.length == 0 : Rectangle {
-                        vertical-stretch: 1;
-                        VerticalLayout {
-                            alignment: center;
-                            spacing: 8px;
-                            Text { text: "🖨"; color: #475569; font-size: 34px; horizontal-alignment: center; }
-                            Text {
-                                text: L.empty-devices-title;
-                                color: #cbd5e1;
-                                font-size: 14px;
-                                horizontal-alignment: center;
-                            }
-                            Text {
-                                text: L.empty-devices-desc;
-                                color: #64748b;
-                                font-size: 12px;
-                                wrap: word-wrap;
-                                horizontal-alignment: center;
-                                width: parent.width - 20px;
-                            }
-                            TextButton {
-                                text: L.connect-device;
-                                primary: true;
-                                clicked => { root.open-connect(); }
-                            }
-                        }
-                    }
-                    if root.devices.length > 0 : ListView {
-                        vertical-stretch: 1;
+                        spacing: 3px;
                         for d in root.devices : Rectangle {
-                            height: 70px;
+                            height: 58px;
                             border-radius: 8px;
-                            background: d.selected ? #273449 : (touch.has-hover ? #1b2940 : #00000000);
-                            border-width: d.selected ? 1px : 0px;
-                            border-color: #8b5cf6;
+                            background: d.selected ? Theme.accent : (touch.has-hover ? Theme.hover : #00000000);
                             HorizontalLayout {
-                                padding: 10px;
+                                padding-left: 10px;
+                                padding-right: 10px;
                                 spacing: 9px;
                                 Rectangle {
-                                    width: 32px;
-                                    height: 32px;
-                                    border-radius: 8px;
-                                    background: d.online ? #173a2c : #1e293b;
-                                    Text {
-                                        text: "▣";
-                                        color: d.online ? #22c55e : #64748b;
-                                        font-size: 16px;
-                                        horizontal-alignment: center;
-                                        vertical-alignment: center;
-                                        width: parent.width;
-                                        height: parent.height;
-                                    }
+                                    width: 30px;
+                                    height: 30px;
+                                    border-radius: 7px;
+                                    background: d.selected ? Theme.on-accent.transparentize(0.82) : Theme.control;
+                                    IconPrinter { x: 3px; y: 3px; tint: d.selected ? Theme.on-accent : (d.online ? Theme.accent : Theme.tertiary); }
                                 }
                                 VerticalLayout {
-                                    spacing: 2px;
+                                    spacing: 1px;
                                     alignment: center;
                                     Text {
                                         text: d.name;
-                                        color: #f1f5f9;
-                                        font-size: 13px;
+                                        color: d.selected ? Theme.on-accent : Theme.text;
+                                        font-size: 12px;
                                         font-weight: 600;
                                         overflow: elide;
                                     }
                                     Text {
                                         text: d.address;
-                                        color: #94a3b8;
+                                        color: d.selected ? Theme.on-accent.transparentize(0.28) : Theme.muted;
                                         font-size: 10px;
                                         overflow: elide;
                                     }
                                 }
                                 Rectangle { horizontal-stretch: 1; }
-                                VerticalLayout {
-                                    alignment: center;
-                                    spacing: 3px;
-                                    HorizontalLayout {
-                                        spacing: 4px;
-                                        alignment: end;
-                                        StatusDot { online: d.online; }
-                                        Text {
-                                            text: d.online ? L.device-online : L.device-offline;
-                                            color: d.online ? #22c55e : #64748b;
-                                            font-size: 10px;
-                                        }
-                                    }
-                                    Badge { text: d.cloud ? L.device-cloud : L.device-lan; tone: d.cloud ? #0e7490 : #334155; }
-                                }
+                                StatusDot { online: d.online; }
                             }
-                            touch := TouchArea {
-                                clicked => { root.select-device(d.id); }
-                            }
+                            touch := TouchArea { clicked => { root.select-device(d.id); } }
                         }
                     }
                 }
             }
+        }
 
-            // detail column
-            Rectangle {
-                horizontal-stretch: 1;
-                border-radius: 10px;
-                background: #111c33;
-                border-width: 1px;
-                border-color: #24344d;
-                if root.selected-device == "" : Rectangle {
-                    VerticalLayout {
-                        alignment: center;
-                        spacing: 10px;
-                        Text { text: "◈"; color: #334155; font-size: 40px; horizontal-alignment: center; }
-                        Text {
-                            text: L.empty-devices-title;
-                            color: #94a3b8;
-                            font-size: 14px;
-                            horizontal-alignment: center;
+        // detail
+        Rectangle {
+            horizontal-stretch: 1;
+            height: parent.height;
+            background: Theme.bg;
+            if root.selected-device == "" : Rectangle {
+                width: parent.width;
+                height: parent.height;
+                VerticalLayout {
+                    width: parent.width;
+                    height: parent.height;
+                    alignment: center;
+                    spacing: 10px;
+                    Rectangle {
+                        width: parent.width;
+                        height: 64px;
+                        Rectangle {
+                            x: (parent.width - 64px) / 2;
+                            width: 64px;
+                            height: 64px;
+                            border-radius: 16px;
+                            Image { source: @image-url("assets/lanprint-icon.png"); width: parent.width; height: parent.height; }
                         }
                     }
+                    Text { text: L.empty-devices-title; color: Theme.text; font-size: 16px; font-weight: 600; horizontal-alignment: center; width: parent.width; }
+                    Text {
+                        text: L.empty-devices-desc;
+                        color: Theme.muted;
+                        font-size: 12px;
+                        wrap: word-wrap;
+                        horizontal-alignment: center;
+                        width: parent.width;
+                    }
+                    Rectangle {
+                        width: parent.width;
+                        height: 30px;
+                        TextButton { x: (parent.width - 130px) / 2; text: L.connect-device; primary: true; width: 130px; clicked => { root.open-connect(); } }
+                    }
                 }
-                if root.selected-device != "" : VerticalLayout {
-                    padding: 14px;
-                    spacing: 10px;
+            }
+            if root.selected-device != "" : VerticalLayout {
+                padding: 22px;
+                spacing: 16px;
+                HorizontalLayout {
+                    spacing: 12px;
+                    Rectangle {
+                        width: 46px;
+                        height: 46px;
+                        border-radius: 11px;
+                        background: Theme.accent-soft;
+                        IconPrinter { x: 11px; y: 11px; tint: Theme.accent; }
+                    }
+                    VerticalLayout {
+                        spacing: 2px;
+                        alignment: center;
+                        Text { text: root.selected-device-name; color: Theme.text; font-size: 21px; font-weight: 700; }
+                        Text { text: root.selected-device-address; color: Theme.muted; font-size: 11px; }
+                    }
+                    Rectangle { horizontal-stretch: 1; }
                     HorizontalLayout {
-                        spacing: 8px;
-                        VerticalLayout {
-                            spacing: 2px;
-                            Text { text: root.selected-device-name; color: #f8fafc; font-size: 18px; font-weight: 700; }
-                            Text { text: root.selected-device-address; color: #94a3b8; font-size: 11px; }
-                        }
-                        Rectangle { horizontal-stretch: 1; }
+                        spacing: 5px;
+                        alignment: center;
                         StatusDot { online: root.selected-device-online; }
                         Text {
                             text: root.selected-device-online ? L.device-online : L.device-offline;
-                            color: root.selected-device-online ? #22c55e : #64748b;
-                            font-size: 12px;
-                            vertical-alignment: center;
-                        }
-                        TextButton {
-                            text: L.remove;
-                            small: true;
-                            clicked => { root.remove-device(root.selected-device); }
-                        }
-                    }
-                    Rectangle { height: 1px; background: #24344d; }
-                    Text { text: L.shared-printers; color: #cbd5e1; font-size: 12px; font-weight: 600; }
-                    if root.printers.length == 0 : Rectangle {
-                        vertical-stretch: 1;
-                        Text {
-                            text: L.no-printers;
-                            color: #64748b;
-                            font-size: 13px;
-                            horizontal-alignment: center;
+                            color: root.selected-device-online ? Theme.success : Theme.tertiary;
+                            font-size: 11px;
                             vertical-alignment: center;
                         }
                     }
-                    if root.printers.length > 0 : ListView {
-                        vertical-stretch: 1;
-                        for p in root.printers : Rectangle {
-                            height: 108px;
-                            border-radius: 9px;
-                            background: #16233b;
-                            border-width: 1px;
-                            border-color: #24344d;
+                    TextButton { text: L.remove; small: true; clicked => { root.remove-device(root.selected-device); } }
+                }
+                Rectangle { height: 1px; background: Theme.separator; }
+                Text { text: L.shared-printers; color: Theme.muted; font-size: 11px; font-weight: 600; }
+                if root.printers.length == 0 : Rectangle {
+                    vertical-stretch: 1;
+                    Text { text: L.no-printers; color: Theme.tertiary; font-size: 12px; horizontal-alignment: center; vertical-alignment: center; }
+                }
+                if root.printers.length > 0 : ScrollView {
+                horizontal-scrollbar-policy: ScrollBarPolicy.always-off;
+                    vertical-stretch: 1;
+                    VerticalLayout {
+                        width: parent.width;
+                        spacing: 10px;
+                        for p in root.printers : Card {
+                            height: 104px;
                             VerticalLayout {
-                                padding: 12px;
-                                spacing: 5px;
+                                padding: 14px;
+                                spacing: 7px;
                                 HorizontalLayout {
                                     spacing: 8px;
-                                    Text { text: "▤"; color: #8b5cf6; font-size: 18px; vertical-alignment: center; }
-                                    Text {
-                                        text: p.display-name;
-                                        color: #f1f5f9;
-                                        font-size: 14px;
-                                        font-weight: 600;
-                                        vertical-alignment: center;
-                                    }
-                                    Badge {
-                                        text: p.status;
-                                        tone: p.online ? #166534 : #475569;
-                                    }
-                                    if p.supports-scan : Badge { text: L.scan-support; tone: #0e7490; }
-                                    if p.has-password : Badge { text: "🔒"; tone: #7c3aed; }
+                                    Text { text: p.display-name; color: Theme.text; font-size: 14px; font-weight: 600; vertical-alignment: center; }
+                                    if p.supports-scan : Badge { text: L.scan-support; tone: Theme.accent; }
+                                    if p.has-password : Badge { text: "PIN"; tone: Theme.warning; }
                                     Rectangle { horizontal-stretch: 1; }
-                                    if p.added : HorizontalLayout {
-                                        spacing: 6px;
-                                        Text {
-                                            text: L.added;
-                                            color: #22c55e;
-                                            font-size: 11px;
-                                            vertical-alignment: center;
-                                        }
-                                        if p.supports-scan : TextButton {
-                                            text: L.scan;
-                                            small: true;
-                                            clicked => { root.open-scan(p.local-name); }
-                                        }
-                                        TextButton {
-                                            text: L.print-test;
-                                            small: true;
-                                            clicked => { root.test-print(p.local-name); }
-                                        }
-                                        TextButton {
-                                            text: L.preferences;
-                                            small: true;
-                                            clicked => { root.open-preferences(p.local-name); }
-                                        }
-                                        TextButton {
-                                            text: L.remove;
-                                            small: true;
-                                            clicked => { root.remove-printer(p.local-name); }
-                                        }
+                                    StatusDot { online: p.online; }
+                                    Text {
+                                        text: p.status;
+                                        color: p.online ? Theme.success : Theme.tertiary;
+                                        font-size: 10px;
+                                        vertical-alignment: center;
                                     }
                                     if !p.added : TextButton {
                                         text: L.add-printer;
@@ -745,17 +856,17 @@ export component MainWindow inherits Window {
                                         }
                                     }
                                 }
-                                Text {
-                                    text: p.driver;
-                                    color: #94a3b8;
-                                    font-size: 11px;
-                                    overflow: elide;
-                                }
-                                Text {
-                                    text: p.preferences;
-                                    color: #64748b;
-                                    font-size: 10px;
-                                    overflow: elide;
+                                Text { text: p.driver; color: Theme.muted; font-size: 11px; overflow: elide; }
+                                HorizontalLayout {
+                                    spacing: 8px;
+                                    Text { text: p.preferences; color: Theme.tertiary; font-size: 10px; vertical-alignment: center; horizontal-stretch: 1; overflow: elide; }
+                                    if p.added : HorizontalLayout {
+                                        spacing: 6px;
+                                        if p.supports-scan : TextButton { text: L.scan; small: true; clicked => { root.open-scan(p.local-name); } }
+                                        TextButton { text: L.print-test; small: true; clicked => { root.test-print(p.local-name); } }
+                                        TextButton { text: L.preferences; small: true; clicked => { root.open-preferences(p.local-name); } }
+                                        TextButton { text: L.remove; small: true; clicked => { root.remove-printer(p.local-name); } }
+                                    }
                                 }
                             }
                         }
@@ -763,124 +874,149 @@ export component MainWindow inherits Window {
                 }
             }
         }
+    }
 
-        // ---------- status bar ----------
+    // ---------------------------------------------------------------- toolbar
+    Rectangle {
+        x: 0px;
+        y: 0px;
+        width: parent.width;
+        height: 56px;
+        background: Theme.toolbar;
         Rectangle {
-            y: parent.height - 34px;
+            y: parent.height - 1px;
             width: parent.width;
-            height: 34px;
-            background: #0b1424;
-            border-width: 0;
-            HorizontalLayout {
-                padding-left: 16px;
-                padding-right: 16px;
-                spacing: 10px;
-                alignment: start;
-                StatusDot { online: root.status-text != ""; }
-                Text { text: root.status-text; color: #94a3b8; font-size: 11px; vertical-alignment: center; }
-                if root.share-code != "" : Text {
-                    text: L.share-code + ": " + root.share-code;
-                    color: #22d3ee;
-                    font-size: 11px;
-                    vertical-alignment: center;
-                }
-                if root.cloud-status != "" : Text {
-                    text: root.cloud-status;
-                    color: root.cloud-status == L.cloud-connected ? #22c55e : #f59e0b;
-                    font-size: 11px;
-                    vertical-alignment: center;
-                }
-                Rectangle { horizontal-stretch: 1; }
-                Text { text: "v" + root.version-text; color: #475569; font-size: 10px; vertical-alignment: center; }
-            }
+            height: 1px;
+            background: Theme.separator;
         }
+        HorizontalLayout {
+            x: 0px;
+            y: 0px;
+            width: parent.width;
+            height: 56px;
+            padding-left: 20px;
+            padding-right: 16px;
+            spacing: 10px;
+            Rectangle {
+                width: 30px;
+                height: 30px;
+                border-radius: 7px;
+                Image { source: @image-url("assets/lanprint-icon.png"); width: parent.width; height: parent.height; }
+            }
+            Text { text: "lanPrint"; color: Theme.text; font-size: 16px; font-weight: 700; vertical-alignment: center; }
+            Text { text: "·"; color: Theme.tertiary; font-size: 14px; vertical-alignment: center; }
+            Text { text: L.app-tagline; color: Theme.muted; font-size: 11px; vertical-alignment: center; overflow: elide; }
+            Rectangle { horizontal-stretch: 1; }
+            if root.busy : Text { text: "…"; color: Theme.accent; font-size: 15px; vertical-alignment: center; }
+            TextButton { text: L.refresh; small: true; clicked => { root.refresh(); } }
+            TextButton {
+                text: L.connect-device;
+                primary: true;
+                clicked => { root.open-connect(); }
+            }
+            TextButton { text: L.settings; small: true; clicked => { root.open-settings(); } }
+        }
+    }
 
-        // ---------- connect dialog ----------
-        if root.connect-open : Rectangle {
+    // -------------------------------------------------------------- status bar
+    Rectangle {
+        y: parent.height - 28px;
+        width: parent.width;
+        height: 28px;
+        background: Theme.toolbar;
+        Rectangle { width: parent.width; height: 1px; background: Theme.separator; }
+        HorizontalLayout {
             width: parent.width;
             height: parent.height;
-            background: #00000099;
-            block := TouchArea { }
-            Rectangle {
-                width: 560px;
-                height: 560px;
-                x: (parent.width - self.width) / 2;
-                y: (parent.height - self.height) / 2;
-                border-radius: 14px;
-                background: #111c33;
-                border-width: 1px;
-                border-color: #334155;
-                VerticalLayout {
-                    padding: 20px;
-                    spacing: 12px;
+            padding-left: 14px;
+            padding-right: 14px;
+            spacing: 8px;
+            alignment: start;
+            StatusDot { online: root.status-text != ""; }
+            Text { text: root.status-text; color: Theme.muted; font-size: 10px; vertical-alignment: center; }
+            if root.share-code != "" : Text { text: L.share-code + ": " + root.share-code; color: Theme.accent; font-size: 10px; vertical-alignment: center; }
+            if root.cloud-status != "" : Text {
+                text: root.cloud-status;
+                color: root.cloud-status == L.cloud-connected ? Theme.success : Theme.warning;
+                font-size: 10px;
+                vertical-alignment: center;
+            }
+            Rectangle { horizontal-stretch: 1; }
+            Text { text: "v" + root.version-text; color: Theme.tertiary; font-size: 9px; vertical-alignment: center; }
+        }
+    }
+
+    // ---------------------------------------------------------- connect sheet
+    if root.connect-open : Rectangle {
+        width: parent.width;
+        height: parent.height;
+        background: Theme.overlay;
+        block := TouchArea { }
+        Rectangle {
+            width: 600px;
+            height: 570px;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            border-radius: 14px;
+            background: Theme.panel;
+            border-width: 1px;
+            border-color: Theme.border;
+            VerticalLayout {
+                padding: 20px;
+                spacing: 12px;
+                HorizontalLayout {
+                    Text { text: L.connect-title; color: Theme.text; font-size: 17px; font-weight: 600; }
+                    Rectangle { horizontal-stretch: 1; }
+                    IconButton { text: "×"; clicked => { root.close-connect(); } }
+                }
+                Segmented {
+                    labels: [L.connect-scan-tab, L.connect-manual-tab];
+                    current: root.connect-tab;
+                    changed(i) => { root.connect-tab = i; }
+                }
+                if root.connect-tab == 0 : VerticalLayout {
+                    vertical-stretch: 1;
+                    spacing: 10px;
                     HorizontalLayout {
-                        Text { text: L.connect-title; color: #f8fafc; font-size: 18px; font-weight: 700; }
-                        Rectangle { horizontal-stretch: 1; }
-                        IconButton { text: "✕"; clicked => { root.close-connect(); } }
-                    }
-                    HorizontalLayout {
-                        spacing: 6px;
-                        TextButton {
-                            text: L.connect-scan-tab;
-                            small: true;
-                            primary: root.connect-tab == 0;
-                            clicked => { root.connect-tab = 0; }
-                        }
-                        TextButton {
-                            text: L.connect-manual-tab;
-                            small: true;
-                            primary: root.connect-tab == 1;
-                            clicked => { root.connect-tab = 1; }
-                        }
-                        Rectangle { horizontal-stretch: 1; }
-                    }
-                    if root.connect-tab == 0 : VerticalLayout {
-                        vertical-stretch: 1;
                         spacing: 8px;
-                        HorizontalLayout {
-                            spacing: 8px;
-                            Text { text: L.scanned-devices; color: #cbd5e1; font-size: 12px; font-weight: 600; vertical-alignment: center; }
-                            Rectangle { horizontal-stretch: 1; }
-                            TextButton {
-                                text: root.connect-scanning ? L.scanning : L.scan-lan;
-                                small: true;
-                                enabled: !root.connect-scanning;
-                                clicked => { root.scan-lan(); }
-                            }
+                        Text { text: L.scanned-devices; color: Theme.muted; font-size: 11px; font-weight: 600; vertical-alignment: center; }
+                        Rectangle { horizontal-stretch: 1; }
+                        TextButton { text: root.connect-scanning ? L.scanning : L.scan-lan; small: true; enabled: !root.connect-scanning; clicked => { root.scan-lan(); } }
+                    }
+                    if root.discoveries.length == 0 : Rectangle {
+                        vertical-stretch: 1;
+                        Text {
+                            text: root.connect-scanning ? L.scanning-lan : L.scan-empty;
+                            color: Theme.tertiary;
+                            font-size: 12px;
+                            wrap: word-wrap;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                            width: parent.width - 30px;
                         }
-                        if root.discoveries.length == 0 : Rectangle {
-                            vertical-stretch: 1;
-                            Text {
-                                text: root.connect-scanning ? L.scanning-lan : L.scan-empty;
-                                color: #64748b;
-                                font-size: 12px;
-                                wrap: word-wrap;
-                                horizontal-alignment: center;
-                                vertical-alignment: center;
-                                width: parent.width - 30px;
-                            }
-                        }
-                        if root.discoveries.length > 0 : ListView {
-                            vertical-stretch: 1;
-                            for d in root.discoveries : Rectangle {
-                                height: 60px;
-                                border-radius: 8px;
-                                background: #16233b;
+                    }
+                    if root.discoveries.length > 0 : ScrollView {
+                horizontal-scrollbar-policy: ScrollBarPolicy.always-off;
+                        vertical-stretch: 1;
+                        VerticalLayout {
+                            width: parent.width;
+                            spacing: 7px;
+                            for d in root.discoveries : Card {
+                                height: 58px;
                                 HorizontalLayout {
                                     padding: 10px;
-                                    spacing: 8px;
+                                    spacing: 9px;
+                                    Rectangle {
+                                        width: 30px; height: 30px; border-radius: 7px; background: Theme.control;
+                                        IconPrinter { x: 3px; y: 3px; tint: Theme.accent; }
+                                    }
                                     VerticalLayout {
-                                        spacing: 2px;
-                                        alignment: center;
-                                        Text { text: d.name; color: #f1f5f9; font-size: 13px; font-weight: 600; }
-                                        Text {
-                                            text: d.address + " · " + d.os + " · v" + d.version;
-                                            color: #94a3b8;
-                                            font-size: 10px;
-                                        }
+                                        spacing: 1px; alignment: center;
+                                        Text { text: d.name; color: Theme.text; font-size: 12px; font-weight: 600; }
+                                        Text { text: d.address + " · " + d.os + " · v" + d.version; color: Theme.muted; font-size: 10px; }
                                     }
                                     Rectangle { horizontal-stretch: 1; }
-                                    if d.cloud : Badge { text: L.device-cloud; tone: #0e7490; }
+                                    if d.cloud : Badge { text: L.device-cloud; tone: Theme.accent; }
                                     TextButton {
                                         text: L.connect;
                                         small: true;
@@ -895,515 +1031,511 @@ export component MainWindow inherits Window {
                                 }
                             }
                         }
-                        TextButton {
-                            text: L.manual-input;
-                            clicked => { root.connect-tab = 1; }
-                        }
                     }
-                    if root.connect-tab == 1 : VerticalLayout {
-                        vertical-stretch: 1;
-                        spacing: 8px;
-                        CheckBox {
-                            text: L.cloud-client-toggle;
-                            checked <=> root.connect-cloud-on;
-                            font-size: 12px;
-                        }
-                        if root.connect-cloud-on : VerticalLayout {
-                            spacing: 6px;
-                            Text { text: L.server-url; color: #cbd5e1; font-size: 12px; }
-                            InputBox {
-                                text <=> root.connect-cloud-server;
-                                placeholder: L.bridge-url-placeholder;
-                            }
-                            Text { text: L.share-code; color: #cbd5e1; font-size: 12px; }
-                            InputBox {
-                                text <=> root.connect-cloud-code;
-                                placeholder: L.share-code-placeholder;
-                            }
-                            Text {
-                                text: L.cloud-connect-desc;
-                                color: #64748b;
-                                font-size: 10px;
-                                wrap: word-wrap;
-                            }
-                        }
-                        if !root.connect-cloud-on : VerticalLayout {
-                            spacing: 6px;
-                            Text { text: L.host-name-or-ip; color: #cbd5e1; font-size: 12px; }
-                            InputBox {
-                                text <=> root.connect-address;
-                                placeholder: L.host-placeholder;
-                            }
-                            Text { text: ""; color: #00000000; font-size: 1px; height: 0px; }
-                        }
-                        Text { text: L.access-code; color: #cbd5e1; font-size: 12px; }
-                        InputBox {
-                            text <=> root.connect-code;
-                            placeholder: L.access-code-placeholder;
-                            password: true;
-                        }
-                        if root.connect-error != "" : Text {
-                            text: root.connect-error;
-                            color: #f87171;
-                            font-size: 12px;
-                            wrap: word-wrap;
-                        }
-                        if root.connect-ok != "" : Text {
-                            text: root.connect-ok;
-                            color: #22c55e;
-                            font-size: 12px;
-                        }
-                        Rectangle { vertical-stretch: 1; }
-                        HorizontalLayout {
-                            spacing: 8px;
-                            TextButton {
-                                text: root.connect-testing ? L.testing : L.test-connection;
-                                enabled: !root.connect-testing;
-                                clicked => {
-                                    root.test-connection(
-                                        root.connect-name,
-                                        root.connect-address,
-                                        root.connect-code,
-                                        root.connect-cloud-server,
-                                        root.connect-cloud-code,
-                                        root.connect-cloud-on
-                                    );
-                                }
-                            }
-                            Rectangle { horizontal-stretch: 1; }
-                            TextButton {
-                                text: L.cancel;
-                                clicked => { root.close-connect(); }
-                            }
-                            TextButton {
-                                text: L.save-device;
-                                primary: true;
-                                clicked => {
-                                    root.save-connection(
-                                        root.connect-name,
-                                        root.connect-address,
-                                        root.connect-code,
-                                        root.connect-cloud-server,
-                                        root.connect-cloud-code,
-                                        root.connect-cloud-on
-                                    );
-                                }
-                            }
-                        }
-                    }
+                    TextButton { text: L.manual-input; clicked => { root.connect-tab = 1; } }
                 }
-            }
-        }
-
-        // ---------- settings ----------
-        if root.settings-open : Rectangle {
-            width: parent.width;
-            height: parent.height;
-            background: #00000099;
-            Rectangle {
-                width: parent.width - 120px;
-                height: parent.height - 80px;
-                x: 60px;
-                y: 40px;
-                border-radius: 14px;
-                background: #111c33;
-                border-width: 1px;
-                border-color: #334155;
-                VerticalLayout {
-                    padding: 20px;
-                    spacing: 12px;
+                if root.connect-tab == 1 : VerticalLayout {
+                    vertical-stretch: 1;
+                    spacing: 9px;
                     HorizontalLayout {
-                        Text { text: L.settings-title; color: #f8fafc; font-size: 18px; font-weight: 700; }
-                        Rectangle { horizontal-stretch: 1; }
-                        IconButton { text: "✕"; clicked => { root.settings-open = false; } }
+                        spacing: 8px;
+                        Text { text: L.cloud-client-toggle; color: Theme.text; font-size: 12px; vertical-alignment: center; horizontal-stretch: 1; }
+                        Switch { checked: root.connect-cloud-on; toggled(v) => { root.connect-cloud-on = v; } }
                     }
-                    HorizontalLayout {
+                    if root.connect-cloud-on : VerticalLayout {
                         spacing: 6px;
-                        TextButton { text: L.general; small: true; primary: root.settings-tab == 0; clicked => { root.settings-tab = 0; } }
-                        TextButton { text: L.share-printers; small: true; primary: root.settings-tab == 1; clicked => { root.settings-tab = 1; } }
-                        TextButton { text: L.cloud-title; small: true; primary: root.settings-tab == 2; clicked => { root.settings-tab = 2; } }
-                        TextButton { text: L.about; small: true; primary: root.settings-tab == 3; clicked => { root.settings-tab = 3; } }
-                        Rectangle { horizontal-stretch: 1; }
+                        Text { text: L.server-url; color: Theme.muted; font-size: 11px; }
+                        InputBox { text <=> root.connect-cloud-server; placeholder: L.bridge-url-placeholder; }
+                        Text { text: L.share-code; color: Theme.muted; font-size: 11px; }
+                        InputBox { text <=> root.connect-cloud-code; placeholder: L.share-code-placeholder; }
+                        MutedText { text: L.cloud-connect-desc; width: parent.width; wrap: word-wrap; }
                     }
-                    Rectangle { height: 1px; background: #24344d; }
-
-                    if root.settings-tab == 0 : ScrollView {
-                        vertical-stretch: 1;
-                        VerticalLayout {
-                            spacing: 14px;
-                            width: parent.width;
-                            Rectangle {
-                                border-radius: 10px;
-                                background: #16233b;
-                                VerticalLayout {
-                                    padding: 14px;
-                                    spacing: 10px;
-                                    SectionTitle { text: L.language; }
-                                    ComboBox {
-                                        model: root.language-names;
-                                        current-index: root.language-index;
-                                        selected(value) => {
-                                            root.language-changed(value);
-                                        }
-                                        width: 260px;
-                                    }
-                                    Rectangle { height: 1px; background: #24344d; }
-                                    CheckBox {
-                                        text: L.autostart;
-                                        checked <=> root.autostart;
-                                        toggled => { root.set-autostart(root.autostart); }
-                                        font-size: 13px;
-                                    }
-                                    MutedText { text: L.autostart-desc; }
-                                }
-                            }
-                            Rectangle {
-                                border-radius: 10px;
-                                background: #16233b;
-                                VerticalLayout {
-                                    padding: 14px;
-                                    spacing: 10px;
-                                    SectionTitle { text: L.host-sharing; }
-                                    MutedText { text: L.host-password-desc; width: parent.width; wrap: word-wrap; }
-                                    HorizontalLayout {
-                                        spacing: 8px;
-                                        InputBox {
-                                            text <=> root.host-password-input;
-                                            placeholder: root.host-password-set ? L.change-password : L.set-password;
-                                            password: true;
-                                            horizontal-stretch: 1;
-                                        }
-                                        TextButton {
-                                            text: root.host-password-set ? L.change-password : L.set-password;
-                                            primary: true;
-                                            clicked => { root.set-host-password(root.host-password-input); }
-                                        }
-                                    }
-                                    if !root.host-password-set : Text {
-                                        text: L.status-no-host-password;
-                                        color: #f59e0b;
-                                        font-size: 11px;
-                                    }
-                                }
-                            }
-                            Rectangle {
-                                border-radius: 10px;
-                                background: #16233b;
-                                VerticalLayout {
-                                    padding: 14px;
-                                    spacing: 8px;
-                                    SectionTitle { text: L.jobs; }
-                                    MutedText { text: L.no-jobs; }
-                                }
-                            }
-                            HorizontalLayout {
-                                spacing: 8px;
-                                TextButton { text: L.open-logs; small: true; clicked => { root.open-logs(); } }
-                                TextButton { text: L.docs; small: true; clicked => { root.open-docs(); } }
-                                Rectangle { horizontal-stretch: 1; }
-                                TextButton { text: L.quit; small: true; clicked => { root.quit-app(); } }
-                            }
-                        }
+                    if !root.connect-cloud-on : VerticalLayout {
+                        spacing: 6px;
+                        Text { text: L.host-name-or-ip; color: Theme.muted; font-size: 11px; }
+                        InputBox { text <=> root.connect-address; placeholder: L.host-placeholder; }
                     }
-
-                    if root.settings-tab == 1 : ScrollView {
-                        vertical-stretch: 1;
-                        VerticalLayout {
-                            spacing: 10px;
-                            width: parent.width;
-                            MutedText { text: L.share-printers-desc; }
-                            if root.local-printers.length == 0 : Text {
-                                text: L.no-local-printers;
-                                color: #64748b;
-                                font-size: 13px;
-                            }
-                            for lp in root.local-printers : Rectangle {
-                                height: 74px;
-                                border-radius: 9px;
-                                background: #16233b;
-                                border-width: 1px;
-                                border-color: #24344d;
-                                HorizontalLayout {
-                                    padding: 12px;
-                                    spacing: 10px;
-                                    VerticalLayout {
-                                        spacing: 2px;
-                                        alignment: center;
-                                        Text { text: lp.name; color: #f1f5f9; font-size: 13px; font-weight: 600; }
-                                        Text {
-                                            text: lp.driver + " · " + lp.status + (lp.supports-scan ? " · " + L.scan-support : "");
-                                            color: #94a3b8;
-                                            font-size: 10px;
-                                            overflow: elide;
-                                        }
-                                    }
-                                    Rectangle { horizontal-stretch: 1; }
-                                    if lp.shared : Badge { text: lp.has-password ? "🔒 " + L.shared : L.shared; tone: #166534; }
-                                    TextButton {
-                                        text: L.printer-password;
-                                        small: true;
-                                        enabled: lp.shared;
-                                        clicked => {
-                                            root.password-target = lp.name;
-                                            root.password-kind = 1;
-                                            root.password-title = L.printer-password;
-                                            root.password-input = "";
-                                            root.password-open = true;
-                                        }
-                                    }
-                                    CheckBox {
-                                        checked: lp.shared;
-                                        toggled => { root.share-printer(lp.name, !lp.shared); }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    if root.settings-tab == 2 : ScrollView {
-                        vertical-stretch: 1;
-                        VerticalLayout {
-                            spacing: 12px;
-                            width: parent.width;
-                            Rectangle {
-                                border-radius: 10px;
-                                background: #16233b;
-                                VerticalLayout {
-                                    padding: 14px;
-                                    spacing: 10px;
-                                    SectionTitle { text: L.cloud-title; }
-                                    MutedText { text: L.cloud-enable-desc; width: parent.width; wrap: word-wrap; }
-                                    CheckBox {
-                                        text: L.cloud-enable;
-                                        checked <=> root.cloud-enabled;
-                                        font-size: 13px;
-                                    }
-                                    Text { text: L.server-url; color: #cbd5e1; font-size: 12px; }
-                                    InputBox {
-                                        text <=> root.cloud-server;
-                                        placeholder: L.bridge-url-placeholder;
-                                    }
-                                    Text { text: L.server-code; color: #cbd5e1; font-size: 12px; }
-                                    InputBox {
-                                        text <=> root.cloud-code;
-                                        placeholder: L.server-code-placeholder;
-                                        password: true;
-                                    }
-                                    HorizontalLayout {
-                                        spacing: 8px;
-                                        TextButton {
-                                            text: L.cloud-save;
-                                            primary: true;
-                                            clicked => { root.cloud-save(root.cloud-enabled, root.cloud-server, root.cloud-code); }
-                                        }
-                                        Rectangle { horizontal-stretch: 1; }
-                                    }
-                                    if root.share-code != "" : Rectangle {
-                                        border-radius: 8px;
-                                        background: #0f172a;
-                                        HorizontalLayout {
-                                            padding: 10px;
-                                            spacing: 8px;
-                                            VerticalLayout {
-                                                spacing: 2px;
-                                                Text { text: L.share-code; color: #94a3b8; font-size: 10px; }
-                                                Text { text: root.share-code; color: #22d3ee; font-size: 18px; font-weight: 700; letter-spacing: 2px; }
-                                            }
-                                            Rectangle { horizontal-stretch: 1; }
-                                            TextButton { text: L.copy-code; small: true; clicked => { root.copy-share-code(); } }
-                                        }
-                                    }
-                                    MutedText { text: L.cloud-hint; width: parent.width; wrap: word-wrap; }
-                                }
-                            }
-                        }
-                    }
-
-                    if root.settings-tab == 3 : VerticalLayout {
-                        vertical-stretch: 1;
-                        spacing: 10px;
-                        Rectangle {
-                            border-radius: 10px;
-                            background: #16233b;
-                            VerticalLayout {
-                                padding: 16px;
-                                spacing: 8px;
-                                Text { text: L.app-name; color: #f8fafc; font-size: 24px; font-weight: 700; }
-                                MutedText { text: L.app-tagline; }
-                                Text { text: L.version + ": " + root.version-text; color: #94a3b8; font-size: 12px; }
-                                Text { text: "MIT License · https://github.com/Kaiyuan/lanPrint"; color: #64748b; font-size: 11px; }
-                                HorizontalLayout {
-                                    spacing: 8px;
-                                    TextButton { text: L.docs; clicked => { root.open-docs(); } }
-                                    TextButton { text: L.open-logs; clicked => { root.open-logs(); } }
-                                }
-                            }
-                        }
-                        Rectangle { vertical-stretch: 1; }
-                    }
-                }
-            }
-        }
-
-        // ---------- password dialog ----------
-        if root.password-open : Rectangle {
-            width: parent.width;
-            height: parent.height;
-            background: #00000099;
-            Rectangle {
-                width: 430px;
-                height: 250px;
-                x: (parent.width - self.width) / 2;
-                y: (parent.height - self.height) / 2;
-                border-radius: 12px;
-                background: #111c33;
-                border-width: 1px;
-                border-color: #334155;
-                VerticalLayout {
-                    padding: 18px;
-                    spacing: 10px;
-                    Text { text: root.password-title; color: #f8fafc; font-size: 16px; font-weight: 600; }
-                    if root.password-kind == 1 : MutedText {
-                        text: L.printer-access-code;
-                        wrap: word-wrap;
-                    }
-                    InputBox {
-                        text <=> root.password-input;
-                        placeholder: L.access-code-placeholder;
-                        password: true;
-                    }
+                    Text { text: L.access-code; color: Theme.muted; font-size: 11px; }
+                    InputBox { text <=> root.connect-code; placeholder: L.access-code-placeholder; password: true; }
+                    if root.connect-error != "" : Text { text: root.connect-error; color: Theme.danger; font-size: 11px; wrap: word-wrap; }
+                    if root.connect-ok != "" : Text { text: root.connect-ok; color: Theme.success; font-size: 11px; }
                     Rectangle { vertical-stretch: 1; }
                     HorizontalLayout {
                         spacing: 8px;
-                        Rectangle { horizontal-stretch: 1; }
-                        TextButton { text: L.cancel; clicked => { root.close-password(); } }
                         TextButton {
-                            text: L.confirm;
-                            primary: true;
-                            clicked => { root.password-confirm(root.password-kind, root.password-target, root.password-input); }
-                        }
-                    }
-                }
-            }
-        }
-
-        // ---------- scan dialog ----------
-        if root.scan-open : Rectangle {
-            width: parent.width;
-            height: parent.height;
-            background: #00000099;
-            Rectangle {
-                width: 460px;
-                height: 380px;
-                x: (parent.width - self.width) / 2;
-                y: (parent.height - self.height) / 2;
-                border-radius: 12px;
-                background: #111c33;
-                border-width: 1px;
-                border-color: #334155;
-                VerticalLayout {
-                    padding: 18px;
-                    spacing: 10px;
-                    HorizontalLayout {
-                        Text { text: L.scan-title; color: #f8fafc; font-size: 16px; font-weight: 600; }
-                        Rectangle { horizontal-stretch: 1; }
-                        IconButton { text: "✕"; enabled: !root.scan-busy; clicked => { root.close-scan(); } }
-                    }
-                    Text { text: L.scan-resolution; color: #cbd5e1; font-size: 12px; }
-                    ComboBox { model: ["150 dpi", "200 dpi", "300 dpi", "600 dpi"]; current-index <=> root.scan-resolution-index; width: 220px; }
-                    Text { text: L.scan-color; color: #cbd5e1; font-size: 12px; }
-                    ComboBox { model: [L.scan-color, L.scan-gray, L.scan-bw]; current-index <=> root.scan-color-index; width: 220px; }
-                    Text { text: L.scan-source; color: #cbd5e1; font-size: 12px; }
-                    ComboBox { model: [L.flatbed, L.adf]; current-index <=> root.scan-source-index; width: 220px; }
-                    if root.scan-busy : Text { text: L.scan-in-progress; color: #22d3ee; font-size: 12px; }
-                    Rectangle { vertical-stretch: 1; }
-                    HorizontalLayout {
-                        spacing: 8px;
-                        Rectangle { horizontal-stretch: 1; }
-                        TextButton { text: L.cancel; enabled: !root.scan-busy; clicked => { root.close-scan(); } }
-                        TextButton {
-                            text: L.start-scan;
-                            primary: true;
-                            enabled: !root.scan-busy;
+                            text: root.connect-testing ? L.testing : L.test-connection;
+                            enabled: !root.connect-testing;
                             clicked => {
-                                root.start-scan(root.scan-target, root.scan-resolution-index, root.scan-color-index, root.scan-source-index);
+                                root.test-connection(root.connect-name, root.connect-address, root.connect-code, root.connect-cloud-server, root.connect-cloud-code, root.connect-cloud-on);
+                            }
+                        }
+                        Rectangle { horizontal-stretch: 1; }
+                        TextButton { text: L.cancel; clicked => { root.close-connect(); } }
+                        TextButton {
+                            text: L.save-device;
+                            primary: true;
+                            clicked => {
+                                root.save-connection(root.connect-name, root.connect-address, root.connect-code, root.connect-cloud-server, root.connect-cloud-code, root.connect-cloud-on);
                             }
                         }
                     }
                 }
             }
-        }
-
-        // ---------- first run ----------
-        if root.first-run-open : Rectangle {
-            width: parent.width;
-            height: parent.height;
-            background: #000000cc;
-            Rectangle {
-                width: 500px;
-                height: 360px;
-                x: (parent.width - self.width) / 2;
-                y: (parent.height - self.height) / 2;
-                border-radius: 14px;
-                background: #111c33;
-                border-width: 1px;
-                border-color: #8b5cf6;
-                VerticalLayout {
-                    padding: 24px;
-                    spacing: 12px;
-                    Text { text: L.first-run-title; color: #f8fafc; font-size: 22px; font-weight: 700; }
-                    Text {
-                        text: L.first-run-desc;
-                        color: #94a3b8;
-                        font-size: 13px;
-                        wrap: word-wrap;
-                        width: parent.width;
-                    }
-                    InputBox {
-                        text <=> root.first-run-password;
-                        placeholder: L.access-code-placeholder;
-                        password: true;
-                    }
-                    MutedText { text: L.host-password-desc; width: parent.width; wrap: word-wrap; }
-                    Rectangle { vertical-stretch: 1; }
-                    HorizontalLayout {
-                        spacing: 8px;
-                        Rectangle { horizontal-stretch: 1; }
-                        TextButton { text: L.skip; clicked => { root.skip-first-run(); } }
-                        TextButton {
-                            text: L.first-run-set;
-                            primary: true;
-                            clicked => { root.set-first-run-password(root.first-run-password); }
-                        }
-                    }
-                }
-            }
-        }
-
-        // ---------- toast ----------
-        if root.toast-open : Rectangle {
-            x: (parent.width - self.width) / 2;
-            y: parent.height - 90px;
-            width: 520px;
-            height: 44px;
-            border-radius: 10px;
-            background: #1e293b;
-            border-width: 1px;
-            border-color: #475569;
-            Text {
-                text: root.toast-text;
-                color: #f8fafc;
-                font-size: 12px;
-                horizontal-alignment: center;
-                vertical-alignment: center;
-                width: parent.width;
-                height: parent.height;
-                wrap: word-wrap;
-            }
-            TouchArea { clicked => { root.toast-close(); } }
         }
     }
+
+    // --------------------------------------------------------- settings sheet
+    if root.settings-open : Rectangle {
+        width: parent.width;
+        height: parent.height;
+        background: Theme.overlay;
+        TouchArea { }
+        Rectangle {
+            width: 900px;
+            height: 620px;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            border-radius: 14px;
+            background: Theme.panel;
+            border-width: 1px;
+            border-color: Theme.border;
+            VerticalLayout {
+                padding: 0px;
+                spacing: 0px;
+                Rectangle {
+                    height: 52px;
+                    background: Theme.panel;
+                    Rectangle { y: parent.height - 1px; width: parent.width; height: 1px; background: Theme.separator; }
+                    HorizontalLayout {
+                        padding-left: 20px;
+                        padding-right: 14px;
+                        width: parent.width;
+                        height: parent.height;
+                        Text { text: L.settings-title; color: Theme.text; font-size: 17px; font-weight: 600; vertical-alignment: center; }
+                        Rectangle { horizontal-stretch: 1; }
+                        IconButton { text: "×"; clicked => { root.settings-open = false; } }
+                    }
+                }
+                HorizontalLayout {
+                    vertical-stretch: 1;
+                    Rectangle {
+                        width: 196px;
+                        vertical-stretch: 1;
+                        background: Theme.sidebar;
+                        Rectangle { x: parent.width - 1px; width: 1px; height: parent.height; background: Theme.separator; }
+                        VerticalLayout {
+                            padding: 12px;
+                            spacing: 3px;
+                            NavItem { label: L.general; glyph: "◉"; selected: root.settings-tab == 0; clicked => { root.settings-tab = 0; } }
+                            NavItem { label: L.share-printers; glyph: "▤"; selected: root.settings-tab == 1; clicked => { root.settings-tab = 1; } }
+                            NavItem { label: L.cloud-title; glyph: "◇"; selected: root.settings-tab == 2; clicked => { root.settings-tab = 2; } }
+                            NavItem { label: L.about; glyph: "ⓘ"; selected: root.settings-tab == 3; clicked => { root.settings-tab = 3; } }
+                            Rectangle { vertical-stretch: 1; }
+                            MutedText { text: "lanPrint " + root.version-text; }
+                        }
+                    }
+                    ScrollView {
+                horizontal-scrollbar-policy: ScrollBarPolicy.always-off;
+                        horizontal-stretch: 1;
+                        VerticalLayout {
+                            padding: 24px;
+                            spacing: 16px;
+                            width: parent.width;
+
+                            if root.settings-tab == 0 : VerticalLayout {
+                                spacing: 16px;
+                                Card {
+                                    VerticalLayout {
+                                        padding: 16px;
+                                        spacing: 12px;
+                                        SectionTitle { text: L.appearance; }
+                                        MutedText { text: L.appearance-desc; width: parent.width; wrap: word-wrap; }
+                                        Segmented {
+                                            labels: [L.appearance-system, L.appearance-light, L.appearance-dark];
+                                            current: root.appearance-index;
+                                            changed(i) => { root.appearance-index = i; root.appearance-changed(i); }
+                                        }
+                                        HorizontalLayout {
+                                            spacing: 9px;
+                                            Text { text: L.accent-color; color: Theme.muted; font-size: 11px; vertical-alignment: center; }
+                                            Rectangle {
+                                                width: 24px; height: 24px; border-radius: 12px; background: #007AFF;
+                                                border-width: root.accent-index == 0 ? 3px : 1px; border-color: root.accent-index == 0 ? Theme.text : Theme.border;
+                                                TouchArea { clicked => { root.accent-index = 0; root.accent-changed(0); } }
+                                            }
+                                            Rectangle {
+                                                width: 24px; height: 24px; border-radius: 12px; background: #AF52DE;
+                                                border-width: root.accent-index == 1 ? 3px : 1px; border-color: root.accent-index == 1 ? Theme.text : Theme.border;
+                                                TouchArea { clicked => { root.accent-index = 1; root.accent-changed(1); } }
+                                            }
+                                            Rectangle {
+                                                width: 24px; height: 24px; border-radius: 12px; background: #FF2D55;
+                                                border-width: root.accent-index == 2 ? 3px : 1px; border-color: root.accent-index == 2 ? Theme.text : Theme.border;
+                                                TouchArea { clicked => { root.accent-index = 2; root.accent-changed(2); } }
+                                            }
+                                            Rectangle {
+                                                width: 24px; height: 24px; border-radius: 12px; background: #FF3B30;
+                                                border-width: root.accent-index == 3 ? 3px : 1px; border-color: root.accent-index == 3 ? Theme.text : Theme.border;
+                                                TouchArea { clicked => { root.accent-index = 3; root.accent-changed(3); } }
+                                            }
+                                            Rectangle {
+                                                width: 24px; height: 24px; border-radius: 12px; background: #FF9500;
+                                                border-width: root.accent-index == 4 ? 3px : 1px; border-color: root.accent-index == 4 ? Theme.text : Theme.border;
+                                                TouchArea { clicked => { root.accent-index = 4; root.accent-changed(4); } }
+                                            }
+                                            Rectangle {
+                                                width: 24px; height: 24px; border-radius: 12px; background: #34C759;
+                                                border-width: root.accent-index == 5 ? 3px : 1px; border-color: root.accent-index == 5 ? Theme.text : Theme.border;
+                                                TouchArea { clicked => { root.accent-index = 5; root.accent-changed(5); } }
+                                            }
+                                            Rectangle {
+                                                width: 24px; height: 24px; border-radius: 12px; background: #8E8E93;
+                                                border-width: root.accent-index == 6 ? 3px : 1px; border-color: root.accent-index == 6 ? Theme.text : Theme.border;
+                                                TouchArea { clicked => { root.accent-index = 6; root.accent-changed(6); } }
+                                            }
+                                        }
+                                    }
+                                }
+                                Card {
+                                    VerticalLayout {
+                                        padding: 16px;
+                                        spacing: 12px;
+                                        SectionTitle { text: L.language; }
+                                        VerticalLayout {
+                                            spacing: 6px;
+                                            HorizontalLayout {
+                                                spacing: 6px;
+                                                LangButton { text: root.language-names[0]; selected: root.language-index == 0; clicked => { root.language-index = 0; root.language-changed(root.language-names[0]); } }
+                                                LangButton { text: root.language-names[1]; selected: root.language-index == 1; clicked => { root.language-index = 1; root.language-changed(root.language-names[1]); } }
+                                                LangButton { text: root.language-names[2]; selected: root.language-index == 2; clicked => { root.language-index = 2; root.language-changed(root.language-names[2]); } }
+                                            }
+                                            HorizontalLayout {
+                                                spacing: 6px;
+                                                LangButton { text: root.language-names[3]; selected: root.language-index == 3; clicked => { root.language-index = 3; root.language-changed(root.language-names[3]); } }
+                                                LangButton { text: root.language-names[4]; selected: root.language-index == 4; clicked => { root.language-index = 4; root.language-changed(root.language-names[4]); } }
+                                                LangButton { text: root.language-names[5]; selected: root.language-index == 5; clicked => { root.language-index = 5; root.language-changed(root.language-names[5]); } }
+                                            }
+                                            HorizontalLayout {
+                                                spacing: 6px;
+                                                LangButton { text: root.language-names[6]; selected: root.language-index == 6; clicked => { root.language-index = 6; root.language-changed(root.language-names[6]); } }
+                                                LangButton { text: root.language-names[7]; selected: root.language-index == 7; clicked => { root.language-index = 7; root.language-changed(root.language-names[7]); } }
+                                                LangButton { text: root.language-names[8]; selected: root.language-index == 8; clicked => { root.language-index = 8; root.language-changed(root.language-names[8]); } }
+                                            }
+                                        }
+                                    }
+                                }
+                                Card {
+                                    HorizontalLayout {
+                                        padding: 16px;
+                                        spacing: 12px;
+                                        VerticalLayout {
+                                            spacing: 3px;
+                                            Text { text: L.autostart; color: Theme.text; font-size: 12px; font-weight: 500; }
+                                            MutedText { text: L.autostart-desc; }
+                                        }
+                                        Rectangle { horizontal-stretch: 1; }
+                                        Switch { checked: root.autostart; toggled(v) => { root.autostart = v; root.set-autostart(v); } }
+                                    }
+                                }
+                                Card {
+                                    VerticalLayout {
+                                        padding: 16px;
+                                        spacing: 10px;
+                                        SectionTitle { text: L.host-sharing; }
+                                        MutedText { text: L.host-password-desc; width: parent.width; wrap: word-wrap; }
+                                        HorizontalLayout {
+                                            spacing: 8px;
+                                            InputBox {
+                                                text <=> root.host-password-input;
+                                                placeholder: root.host-password-set ? L.change-password : L.set-password;
+                                                password: true;
+                                                horizontal-stretch: 1;
+                                            }
+                                            TextButton {
+                                                text: root.host-password-set ? L.change-password : L.set-password;
+                                                primary: true;
+                                                clicked => { root.set-host-password(root.host-password-input); }
+                                            }
+                                        }
+                                        if !root.host-password-set : Text { text: L.status-no-host-password; color: Theme.warning; font-size: 10px; }
+                                    }
+                                }
+                            }
+
+                            if root.settings-tab == 1 : VerticalLayout {
+                                spacing: 16px;
+                                MutedText { text: L.share-printers-desc; width: parent.width; wrap: word-wrap; }
+                                if root.local-printers.length == 0 : Text { text: L.no-local-printers; color: Theme.tertiary; font-size: 12px; }
+                                for lp in root.local-printers : Card {
+                                    height: 76px;
+                                    HorizontalLayout {
+                                        padding: 14px;
+                                        spacing: 10px;
+                                        Rectangle {
+                                            width: 36px; height: 36px; border-radius: 8px; background: Theme.control;
+                                            IconPrinter { x: 6px; y: 6px; tint: lp.shared ? Theme.accent : Theme.muted; }
+                                        }
+                                        VerticalLayout {
+                                            spacing: 2px; alignment: center;
+                                            Text { text: lp.name; color: Theme.text; font-size: 12px; font-weight: 600; }
+                                            Text { text: lp.driver + " · " + lp.status; color: Theme.muted; font-size: 10px; overflow: elide; }
+                                        }
+                                        Rectangle { horizontal-stretch: 1; }
+                                        if lp.shared : Badge { text: lp.has-password ? "PIN" : L.shared; tone: Theme.accent; }
+                                        TextButton {
+                                            text: L.printer-password;
+                                            small: true;
+                                            enabled: lp.shared;
+                                            clicked => {
+                                                root.password-target = lp.name;
+                                                root.password-kind = 1;
+                                                root.password-title = L.printer-password;
+                                                root.password-input = "";
+                                                root.password-open = true;
+                                            }
+                                        }
+                                        Switch { checked: lp.shared; toggled(v) => { root.share-printer(lp.name, v); } }
+                                    }
+                                }
+                            }
+
+                            if root.settings-tab == 2 : VerticalLayout {
+                                spacing: 16px;
+                                Card {
+                                    VerticalLayout {
+                                        padding: 16px;
+                                        spacing: 11px;
+                                        SectionTitle { text: L.cloud-title; }
+                                        MutedText { text: L.cloud-enable-desc; width: parent.width; wrap: word-wrap; }
+                                        HorizontalLayout {
+                                            spacing: 10px;
+                                            Text { text: L.cloud-enable; color: Theme.text; font-size: 12px; vertical-alignment: center; horizontal-stretch: 1; }
+                                            Switch { checked: root.cloud-enabled; toggled(v) => { root.cloud-enabled = v; } }
+                                        }
+                                        Text { text: L.server-url; color: Theme.muted; font-size: 11px; }
+                                        InputBox { text <=> root.cloud-server; placeholder: L.bridge-url-placeholder; }
+                                        Text { text: L.server-code; color: Theme.muted; font-size: 11px; }
+                                        InputBox { text <=> root.cloud-code; placeholder: L.server-code-placeholder; password: true; }
+                                        HorizontalLayout {
+                                            spacing: 8px;
+                                            TextButton {
+                                                text: L.cloud-save;
+                                                primary: true;
+                                                clicked => { root.cloud-save(root.cloud-enabled, root.cloud-server, root.cloud-code); }
+                                            }
+                                        }
+                                        if root.share-code != "" : Rectangle {
+                                            border-radius: 8px;
+                                            background: Theme.field;
+                                            border-width: 1px;
+                                            border-color: Theme.border;
+                                            HorizontalLayout {
+                                                padding: 10px;
+                                                spacing: 8px;
+                                                VerticalLayout {
+                                                    spacing: 2px;
+                                                    Text { text: L.share-code; color: Theme.muted; font-size: 10px; }
+                                                    Text { text: root.share-code; color: Theme.accent; font-size: 18px; font-weight: 700; letter-spacing: 2px; }
+                                                }
+                                                Rectangle { horizontal-stretch: 1; }
+                                                TextButton { text: L.copy-code; small: true; clicked => { root.copy-share-code(); } }
+                                            }
+                                        }
+                                        MutedText { text: L.cloud-hint; width: parent.width; wrap: word-wrap; }
+                                    }
+                                }
+                            }
+
+                            if root.settings-tab == 3 : VerticalLayout {
+                                spacing: 16px;
+                                Card {
+                                    VerticalLayout {
+                                        padding: 18px;
+                                        spacing: 9px;
+                                        HorizontalLayout {
+                                            spacing: 12px;
+                                            Rectangle {
+                                                width: 52px; height: 52px; border-radius: 12px;
+                                                Image { source: @image-url("assets/lanprint-icon.png"); width: parent.width; height: parent.height; }
+                                            }
+                                            VerticalLayout {
+                                                spacing: 2px; alignment: center;
+                                                Text { text: L.app-name; color: Theme.text; font-size: 21px; font-weight: 700; }
+                                                MutedText { text: L.app-tagline; }
+                                            }
+                                        }
+                                        Text { text: L.version + ": " + root.version-text; color: Theme.muted; font-size: 11px; }
+                                        Text { text: "MIT License · github.com/Kaiyuan/lanPrint"; color: Theme.tertiary; font-size: 10px; }
+                                        HorizontalLayout {
+                                            spacing: 8px;
+                                            TextButton { text: L.docs; small: true; clicked => { root.open-docs(); } }
+                                            TextButton { text: L.open-logs; small: true; clicked => { root.open-logs(); } }
+                                            TextButton { text: L.quit; small: true; clicked => { root.quit-app(); } }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // --------------------------------------------------------- password sheet
+    if root.password-open : Rectangle {
+        width: parent.width;
+        height: parent.height;
+        background: Theme.overlay;
+        TouchArea { }
+        Rectangle {
+            width: 440px;
+            height: 246px;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            border-radius: 13px;
+            background: Theme.panel;
+            border-width: 1px;
+            border-color: Theme.border;
+            VerticalLayout {
+                padding: 20px;
+                spacing: 12px;
+                Text { text: root.password-title; color: Theme.text; font-size: 16px; font-weight: 600; }
+                MutedText { text: L.printer-password-desc; width: parent.width; wrap: word-wrap; }
+                InputBox { text <=> root.password-input; placeholder: L.access-code-placeholder; password: true; }
+                Rectangle { vertical-stretch: 1; }
+                HorizontalLayout {
+                    spacing: 8px;
+                    Rectangle { horizontal-stretch: 1; }
+                    TextButton { text: L.cancel; clicked => { root.close-password(); } }
+                    TextButton {
+                        text: L.confirm;
+                        primary: true;
+                        clicked => { root.password-confirm(root.password-kind, root.password-target, root.password-input); }
+                    }
+                }
+            }
+        }
+    }
+
+    // ------------------------------------------------------------- scan sheet
+    if root.scan-open : Rectangle {
+        width: parent.width;
+        height: parent.height;
+        background: Theme.overlay;
+        TouchArea { }
+        Rectangle {
+            width: 480px;
+            height: 410px;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            border-radius: 13px;
+            background: Theme.panel;
+            border-width: 1px;
+            border-color: Theme.border;
+            VerticalLayout {
+                padding: 20px;
+                spacing: 12px;
+                HorizontalLayout {
+                    Text { text: L.scan-title; color: Theme.text; font-size: 16px; font-weight: 600; }
+                    Rectangle { horizontal-stretch: 1; }
+                    IconButton { text: "×"; enabled: !root.scan-busy; clicked => { root.close-scan(); } }
+                }
+                Text { text: L.scan-resolution; color: Theme.muted; font-size: 11px; }
+                Segmented {
+                    labels: ["150 dpi", "200 dpi", "300 dpi", "600 dpi"];
+                    current: root.scan-resolution-index;
+                    changed(i) => { root.scan-resolution-index = i; }
+                }
+                Text { text: L.scan-color; color: Theme.muted; font-size: 11px; }
+                Segmented {
+                    labels: [L.scan-color, L.scan-gray, L.scan-bw];
+                    current: root.scan-color-index;
+                    changed(i) => { root.scan-color-index = i; }
+                }
+                Text { text: L.scan-source; color: Theme.muted; font-size: 11px; }
+                Segmented {
+                    labels: [L.flatbed, L.adf];
+                    current: root.scan-source-index;
+                    changed(i) => { root.scan-source-index = i; }
+                }
+                if root.scan-busy : Text { text: L.scan-in-progress; color: Theme.accent; font-size: 11px; }
+                Rectangle { vertical-stretch: 1; }
+                HorizontalLayout {
+                    spacing: 8px;
+                    Rectangle { horizontal-stretch: 1; }
+                    TextButton { text: L.cancel; enabled: !root.scan-busy; clicked => { root.close-scan(); } }
+                    TextButton {
+                        text: L.start-scan;
+                        primary: true;
+                        enabled: !root.scan-busy;
+                        clicked => { root.start-scan(root.scan-target, root.scan-resolution-index, root.scan-color-index, root.scan-source-index); }
+                    }
+                }
+            }
+        }
+    }
+
+    // --------------------------------------------------------- first run sheet
+    if root.first-run-open : Rectangle {
+        width: parent.width;
+        height: parent.height;
+        background: Theme.overlay;
+        Rectangle {
+            width: 500px;
+            height: 390px;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            border-radius: 14px;
+            background: Theme.panel;
+            border-width: 1px;
+            border-color: Theme.border;
+            VerticalLayout {
+                padding: 26px;
+                spacing: 13px;
+                Text { text: L.first-run-title; color: Theme.text; font-size: 22px; font-weight: 700; }
+                Text { text: L.first-run-desc; color: Theme.muted; font-size: 12px; wrap: word-wrap; width: parent.width; }
+                InputBox { text <=> root.first-run-password; placeholder: L.access-code-placeholder; password: true; }
+                MutedText { text: L.host-password-desc; width: parent.width; wrap: word-wrap; }
+                Rectangle { vertical-stretch: 1; }
+                HorizontalLayout {
+                    spacing: 8px;
+                    Rectangle { horizontal-stretch: 1; }
+                    TextButton { text: L.skip; clicked => { root.skip-first-run(); } }
+                    TextButton {
+                        text: L.first-run-set;
+                        primary: true;
+                        clicked => { root.set-first-run-password(root.first-run-password); }
+                    }
+                }
+            }
+        }
+    }
+
+    // -------------------------------------------------------------------- toast
+    if root.toast-open : Rectangle {
+        x: (parent.width - self.width) / 2;
+        y: parent.height - 92px;
+        width: 500px;
+        height: 42px;
+        border-radius: 11px;
+        background: Theme.panel;
+        border-width: 1px;
+        border-color: Theme.border;
+        Text {
+            text: root.toast-text;
+            color: Theme.text;
+            font-size: 12px;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            width: parent.width;
+            height: parent.height;
+            wrap: word-wrap;
+        }
+        TouchArea { clicked => { root.toast-close(); } }
+    }
 }
+
 
 // Tray menu is a separate component because a SystemTrayIcon cannot share the
 // window's globals. The Rust side feeds translated menu labels into it.

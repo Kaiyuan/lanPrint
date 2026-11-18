@@ -161,5 +161,18 @@
   "preferences_hint": "Usa las preferencias compartidas por el equipo.",
   "no_jobs": "Aún no hay trabajos de impresión",
   "jobs": "Trabajos recientes",
-  "size": "Tamaño"
+  "size": "Tamaño",
+  "appearance": "Apariencia",
+  "appearance_system": "Sistema",
+  "appearance_light": "Claro",
+  "appearance_dark": "Oscuro",
+  "appearance_desc": "Usa la apariencia del sistema o elige un tema claro u oscuro.",
+  "accent_color": "Color de acento",
+  "accent_blue": "Azul",
+  "accent_purple": "Morado",
+  "accent_pink": "Rosa",
+  "accent_red": "Rojo",
+  "accent_orange": "Naranja",
+  "accent_green": "Verde",
+  "accent_graphite": "Grafito"
 }

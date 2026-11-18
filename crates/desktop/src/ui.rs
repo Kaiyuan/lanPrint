@@ -3,7 +3,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use lanprint_core::i18n::Translations;
-use lanprint_core::{DiscoveredDevice, Language, ScanRequest, SharedPrinter};
+use lanprint_core::{AppConfig, DiscoveredDevice, Language, ScanRequest, SharedPrinter};
 use slint::{CloseRequestResponse, ComponentHandle, ModelRc, Timer, TimerMode, VecModel};
 
 use crate::app::{App, AppEvent};
@@ -24,8 +24,9 @@ pub fn run(
     let tray = TrayIcon::new()?;
     let cfg = app.config.read();
     let language = cfg.language();
-    drop(cfg);
     apply_language(&window, language);
+    apply_theme(&window, &cfg);
+    drop(cfg);
     apply_tray_language(&tray, language);
     refresh_ui(&window, &app);
 
@@ -122,6 +123,7 @@ fn wire_callbacks(window: &MainWindow, tray: &TrayIcon, app: &Arc<App>) {
             window.set_cloud_server(cfg.cloud.server_url.clone().into());
             window.set_cloud_code(cfg.cloud.server_code.clone().into());
             window.set_host_password_input("".into());
+            apply_theme(&window, &cfg);
             window.set_settings_open(true);
             window.set_settings_tab(0);
         }
@@ -411,6 +413,32 @@ fn wire_callbacks(window: &MainWindow, tray: &TrayIcon, app: &Arc<App>) {
             autostart::apply_on_startup(enabled);
             if let Some(window) = weak.upgrade() {
                 show_toast(&window, &translation(&app, "settings_saved"));
+            }
+        }
+    });
+
+    window.on_appearance_changed({
+        let app = app.clone();
+        let weak = weak.clone();
+        move |index| {
+            let code = appearance_code(index);
+            app.config.edit(|cfg| cfg.appearance = code.to_string());
+            if let Some(window) = weak.upgrade() {
+                let cfg = app.config.read();
+                apply_theme(&window, &cfg);
+            }
+        }
+    });
+
+    window.on_accent_changed({
+        let app = app.clone();
+        let weak = weak.clone();
+        move |index| {
+            let code = accent_code(index);
+            app.config.edit(|cfg| cfg.accent = code.to_string());
+            if let Some(window) = weak.upgrade() {
+                let cfg = app.config.read();
+                apply_theme(&window, &cfg);
             }
         }
     });
@@ -810,6 +838,7 @@ fn refresh_ui(window: &MainWindow, app: &Arc<App>) {
     window.set_host_password_set(cfg.has_host_password());
     window.set_autostart(cfg.autostart);
     window.set_cloud_enabled(cfg.cloud.enabled);
+    apply_theme(window, &cfg);
     window.set_share_code(cfg.cloud.share_code.clone().into());
     window.set_version_text(lanprint_core::VERSION.into());
     window.set_busy(snap.busy);
@@ -934,6 +963,56 @@ fn apply_tray_language(tray: &TrayIcon, language: Language) {
     let tr = Translations::load(language);
     tray.set_open_text(tr.get("tray_open").into());
     tray.set_quit_text(tr.get("tray_quit").into());
+}
+
+fn appearance_index(code: &str) -> i32 {
+    match code {
+        "light" => 1,
+        "dark" => 2,
+        _ => 0,
+    }
+}
+
+fn appearance_code(index: i32) -> &'static str {
+    match index {
+        1 => "light",
+        2 => "dark",
+        _ => "system",
+    }
+}
+
+fn accent_index(code: &str) -> i32 {
+    match code {
+        "purple" => 1,
+        "pink" => 2,
+        "red" => 3,
+        "orange" => 4,
+        "green" => 5,
+        "graphite" => 6,
+        _ => 0,
+    }
+}
+
+fn accent_code(index: i32) -> &'static str {
+    match index {
+        1 => "purple",
+        2 => "pink",
+        3 => "red",
+        4 => "orange",
+        5 => "green",
+        6 => "graphite",
+        _ => "blue",
+    }
+}
+
+fn apply_theme(window: &MainWindow, cfg: &AppConfig) {
+    let appearance = appearance_index(&cfg.appearance);
+    let accent = accent_index(&cfg.accent);
+    window.set_appearance_index(appearance);
+    window.set_accent_index(accent);
+    let theme = window.global::<Theme>();
+    theme.set_appearance(appearance);
+    theme.set_accent_index(accent);
 }
 
 fn apply_language(window: &MainWindow, language: Language) {
@@ -1107,5 +1186,18 @@ fn apply_language(window: &MainWindow, language: Language) {
         set_no_jobs = "no_jobs",
         set_jobs = "jobs",
         set_size = "size",
+        set_appearance = "appearance",
+        set_appearance_system = "appearance_system",
+        set_appearance_light = "appearance_light",
+        set_appearance_dark = "appearance_dark",
+        set_appearance_desc = "appearance_desc",
+        set_accent_color = "accent_color",
+        set_accent_blue = "accent_blue",
+        set_accent_purple = "accent_purple",
+        set_accent_pink = "accent_pink",
+        set_accent_red = "accent_red",
+        set_accent_orange = "accent_orange",
+        set_accent_green = "accent_green",
+        set_accent_graphite = "accent_graphite",
     );
 }

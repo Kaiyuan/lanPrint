@@ -161,5 +161,18 @@
   "preferences_hint": "使用主机共享的打印机首选项。",
   "no_jobs": "暂无打印任务",
   "jobs": "最近任务",
-  "size": "大小"
+  "size": "大小",
+  "appearance": "外观",
+  "appearance_system": "跟随系统",
+  "appearance_light": "浅色",
+  "appearance_dark": "深色",
+  "appearance_desc": "跟随系统外观，或选择固定的浅色/深色主题。",
+  "accent_color": "强调色",
+  "accent_blue": "蓝色",
+  "accent_purple": "紫色",
+  "accent_pink": "粉色",
+  "accent_red": "红色",
+  "accent_orange": "橙色",
+  "accent_green": "绿色",
+  "accent_graphite": "石墨色"
 }

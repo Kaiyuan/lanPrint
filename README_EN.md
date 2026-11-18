@@ -28,6 +28,8 @@ Supported systems: **Windows 7+, macOS 10.15+, Ubuntu / Debian / UOS / Deepin**.
 - **LAN discovery** — mDNS `_lanprint._tcp.local.` plus manual host/IP entry.
 - **Online/offline status** for hosts and printers.
 - **System tray** — autostart, Open/Quit menu, click to show the window.
+- **macOS-style interface** — unified toolbar, sidebar, cards and forms. Follows the system light/dark appearance automatically, or can be pinned to light/dark.
+- **Custom accent colors** — blue, purple, pink, red, orange, green and graphite, applied instantly and remembered.
 - **Cloud bridge** — independent Rust relay server with Docker, one-line install and HTTPS reverse-proxy support. No inbound port on the host.
 - **Nine UI languages**, switchable without a restart.
 - **Low resource usage** — Slint software renderer, no WebView/Electron.
@@ -102,6 +104,7 @@ The installer adds the binary, desktop entry, icon and CUPS backend symlink. On 
 2. **Settings → Shared printers**: toggle the printers to share.
 3. Optionally set a printer-specific access code.
 4. The status bar shows “Sharing on port 52333” and the host is advertised over mDNS.
+5. Under **Settings → General → Appearance**, choose System, Light or Dark and one of seven accent colors.
 
 ### Client
 

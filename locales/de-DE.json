@@ -161,5 +161,18 @@
   "preferences_hint": "Verwendet die vom Host geteilten Einstellungen.",
   "no_jobs": "Noch keine Druckaufträge",
   "jobs": "Letzte Aufträge",
-  "size": "Größe"
+  "size": "Größe",
+  "appearance": "Erscheinungsbild",
+  "appearance_system": "System",
+  "appearance_light": "Hell",
+  "appearance_dark": "Dunkel",
+  "appearance_desc": "Systemdarstellung verwenden oder ein helles bzw. dunkles Design wählen.",
+  "accent_color": "Akzentfarbe",
+  "accent_blue": "Blau",
+  "accent_purple": "Violett",
+  "accent_pink": "Pink",
+  "accent_red": "Rot",
+  "accent_orange": "Orange",
+  "accent_green": "Grün",
+  "accent_graphite": "Graphit"
 }

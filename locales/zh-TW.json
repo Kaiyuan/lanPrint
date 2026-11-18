@@ -161,5 +161,18 @@
   "preferences_hint": "使用主機共用的印表機偏好設定。",
   "no_jobs": "尚無列印工作",
   "jobs": "最近工作",
-  "size": "大小"
+  "size": "大小",
+  "appearance": "外觀",
+  "appearance_system": "跟隨系統",
+  "appearance_light": "淺色",
+  "appearance_dark": "深色",
+  "appearance_desc": "跟隨系統外觀，或選擇固定的淺色/深色主題。",
+  "accent_color": "強調色",
+  "accent_blue": "藍色",
+  "accent_purple": "紫色",
+  "accent_pink": "粉紅色",
+  "accent_red": "紅色",
+  "accent_orange": "橙色",
+  "accent_green": "綠色",
+  "accent_graphite": "石墨色"
 }

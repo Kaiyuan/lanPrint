@@ -21,6 +21,10 @@ pub struct AppConfig {
     pub device_id: String,
     pub device_name: String,
     pub language: String,
+    /// `system`, `light` or `dark`.
+    pub appearance: String,
+    /// Accent theme: `blue`, `purple`, `pink`, `red`, `orange`, `green` or `graphite`.
+    pub accent: String,
     pub autostart: bool,
     pub api_port: u16,
     /// Argon2 hash of the host (connection) access code.
@@ -49,6 +53,8 @@ impl Default for AppConfig {
             device_id: uuid::Uuid::new_v4().to_string(),
             device_name: default_device_name(),
             language: sys_language(),
+            appearance: "system".into(),
+            accent: "blue".into(),
             autostart: true,
             api_port: crate::DEFAULT_API_PORT,
             host_password_hash: String::new(),
@@ -338,6 +344,15 @@ impl AppConfig {
         }
         if self.api_port == 0 {
             self.api_port = crate::DEFAULT_API_PORT;
+        }
+        if !matches!(self.appearance.as_str(), "system" | "light" | "dark") {
+            self.appearance = "system".into();
+        }
+        if !matches!(
+            self.accent.as_str(),
+            "blue" | "purple" | "pink" | "red" | "orange" | "green" | "graphite"
+        ) {
+            self.accent = "blue".into();
         }
         if self.host_secret.is_empty() {
             let mut secret = [0u8; 32];

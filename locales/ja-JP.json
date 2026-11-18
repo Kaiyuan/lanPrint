@@ -161,5 +161,18 @@
   "preferences_hint": "ホストが共有する印刷設定を使用します。",
   "no_jobs": "印刷ジョブはまだありません",
   "jobs": "最近のジョブ",
-  "size": "サイズ"
+  "size": "サイズ",
+  "appearance": "外観",
+  "appearance_system": "システム",
+  "appearance_light": "ライト",
+  "appearance_dark": "ダーク",
+  "appearance_desc": "システムの外観に合わせるか、ライトまたはダークを固定できます。",
+  "accent_color": "アクセントカラー",
+  "accent_blue": "ブルー",
+  "accent_purple": "パープル",
+  "accent_pink": "ピンク",
+  "accent_red": "レッド",
+  "accent_orange": "オレンジ",
+  "accent_green": "グリーン",
+  "accent_graphite": "グラファイト"
 }
