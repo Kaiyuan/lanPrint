@@ -289,23 +289,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check whether the bridge version is already published
         id: version
-        run: |
-          set -euo pipefail
-          version="$(awk -F'"' '/^version = /{print $2; exit}' crates/bridge/Cargo.toml)"
-          if [ -z "$version" ]; then
-            echo "cannot read the lanprint-bridge version" >&2
-            exit 1
-          fi
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          status="$(curl -sS --retry 3 -o /dev/null -w '%{http_code}' \
-            "https://hub.docker.com/v2/repositories/kaiyuan/lanprint-bridge/tags/$version" || echo 000)"
-          if [ "$status" = "200" ]; then
-            echo "publish=false" >> "$GITHUB_OUTPUT"
-            echo "Bridge $version is already on Docker Hub; skipping the image build."
-          else
-            echo "publish=true" >> "$GITHUB_OUTPUT"
-            echo "Bridge $version is new (HTTP $status); the image will be built and pushed."
-          fi
+        uses: ./.github/actions/bridge-version
 
   docker:
     name: Docker image

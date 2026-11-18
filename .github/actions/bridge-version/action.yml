@@ -1,0 +1,41 @@
+name: Bridge image version
+description: Read the lanprint-bridge version and check whether it is already published on Docker Hub.
+
+inputs:
+  repository:
+    description: Docker Hub repository, owner/name.
+    required: false
+    default: kaiyuan/lanprint-bridge
+
+outputs:
+  version:
+    description: Version from crates/bridge/Cargo.toml.
+    value: ${{ steps.check.outputs.version }}
+  publish:
+    description: "true when the version is not yet on Docker Hub."
+    value: ${{ steps.check.outputs.publish }}
+
+runs:
+  using: composite
+  steps:
+    - id: check
+      shell: bash
+      env:
+        REPOSITORY: ${{ inputs.repository }}
+      run: |
+        set -euo pipefail
+        version="$(awk -F'"' '/^version = /{print $2; exit}' crates/bridge/Cargo.toml)"
+        if [ -z "$version" ]; then
+          echo "cannot read the lanprint-bridge version" >&2
+          exit 1
+        fi
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+        status="$(curl -sS --retry 3 -o /dev/null -w '%{http_code}' \
+          "https://hub.docker.com/v2/repositories/${REPOSITORY}/tags/${version}" || echo 000)"
+        if [ "$status" = "200" ]; then
+          echo "publish=false" >> "$GITHUB_OUTPUT"
+          echo "Bridge $version is already on Docker Hub; skipping the image build."
+        else
+          echo "publish=true" >> "$GITHUB_OUTPUT"
+          echo "Bridge $version is new (HTTP $status); the image will be built and pushed."
+        fi
