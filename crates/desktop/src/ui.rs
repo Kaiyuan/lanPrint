@@ -19,6 +19,7 @@ slint::include_modules!();
 
 thread_local! {
     static EXPANDED_DEVICES: RefCell<HashSet<String>> = RefCell::new(HashSet::new());
+    #[cfg(windows)]
     static WINDOW_EFFECTS_APPLIED: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
 
