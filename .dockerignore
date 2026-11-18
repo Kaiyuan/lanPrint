@@ -1,8 +1,12 @@
 .git
 .github
 target
+**/target
 dist
+package
 docs
 *.log
 *.db
+*.zip
+*.tar.gz
 Thumbs.db

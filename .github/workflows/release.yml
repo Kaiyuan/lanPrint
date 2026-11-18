@@ -32,7 +32,7 @@ jobs:
             target: x86_64-apple-darwin
             name: Mac_x86_64
             kind: mac
-          - os: macos-14
+          - os: macos-15
             target: aarch64-apple-darwin
             name: Mac_aarch64
             kind: mac
@@ -157,7 +157,7 @@ jobs:
       - name: Build with the Windows 7 std
         shell: pwsh
         run: |
-          cargo +nightly build -Z build-std=std,panic_abort --release -p lanprint-desktop --target x86_64-win7-windows-msvc
+          cargo +nightly build -Z build-std=std,panic_abort --release --locked -p lanprint-desktop --target x86_64-win7-windows-msvc
           $ver = "${{ github.ref_name }}".TrimStart("v")
           $dir = "package/lanPrint_${ver}_Windows7_x86_64"
           New-Item -ItemType Directory -Force -Path $dir | Out-Null
@@ -235,7 +235,7 @@ jobs:
             target: x86_64-apple-darwin
             name: Darwin_x86_64
             kind: unix
-          - os: macos-14
+          - os: macos-15
             target: aarch64-apple-darwin
             name: Darwin_aarch64
             kind: unix
@@ -304,10 +304,13 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   release:
     name: Publish GitHub release
     needs: [desktop, windows7, linux-musl, bridge]
+    if: always() && needs.desktop.result == 'success' && needs.bridge.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

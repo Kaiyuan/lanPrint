@@ -1,5 +1,7 @@
 # syntax=docker/dockerfile:1
-FROM rust:1.95-bookworm AS builder
+# Keep in sync with the workspace rust-version in Cargo.toml.
+ARG RUST_VERSION=1.95
+FROM rust:${RUST_VERSION}-bookworm AS builder
 WORKDIR /src
 
 # Cache dependency compilation
@@ -11,7 +13,7 @@ RUN mkdir -p crates/core/src crates/desktop/src crates/bridge/src \
     && echo 'fn main() {}' > crates/desktop/src/main.rs \
     && echo 'fn main() {}' > crates/bridge/src/main.rs \
     && echo '' > crates/core/src/lib.rs \
-    && cargo build --release -p lanprint-bridge || true
+    && cargo build --release --locked -p lanprint-bridge || true
 
 COPY crates ./crates
 COPY locales ./locales
