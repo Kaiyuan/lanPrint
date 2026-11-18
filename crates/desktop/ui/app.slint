@@ -1191,6 +1191,8 @@ export component MainWindow inherits Window {
                     }
                     if root.connect-cloud-on : VerticalLayout {
                         spacing: 6px;
+                        vertical-stretch: 0;
+                        alignment: start;
                         Text { text: L.server-url; color: Theme.muted; font-size: 11px; }
                         InputBox { text <=> root.connect-cloud-server; placeholder: L.bridge-url-placeholder; }
                         Text { text: L.share-code; color: Theme.muted; font-size: 11px; }
@@ -1199,6 +1201,8 @@ export component MainWindow inherits Window {
                     }
                     if !root.connect-cloud-on : VerticalLayout {
                         spacing: 6px;
+                        vertical-stretch: 0;
+                        alignment: start;
                         Text { text: L.host-name-or-ip; color: Theme.muted; font-size: 11px; }
                         InputBox { text <=> root.connect-address; placeholder: L.host-placeholder; }
                     }
