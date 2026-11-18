@@ -119,6 +119,16 @@ section { padding: 54px 0; }
 }
 .note { border-left: 3px solid var(--primary); background: rgba(139, 92, 246, .08); padding: 12px 16px; border-radius: 0 8px 8px 0; color: #ddd6fe; font-size: 13px; margin: 14px 0; }
 .warn { border-left-color: #f59e0b; background: rgba(245, 158, 11, .08); color: #fde68a; }
+.shot { margin: 22px 0 26px; }
+.shot img {
+  display: block; width: 100%; max-width: 720px; height: auto; margin: 0 auto;
+  border: 1px solid var(--border); border-radius: 14px;
+  box-shadow: 0 22px 55px rgba(0, 0, 0, .45), 0 0 0 1px rgba(255, 255, 255, .03);
+  background: #0b1120;
+}
+.shot figcaption { margin-top: 10px; color: var(--muted); font-size: 12.5px; text-align: center; }
+.shot a { display: block; }
+
 footer { border-top: 1px solid var(--border); padding: 28px 0; color: #64748b; font-size: 12px; }
 .footer-inner { display: flex; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
 .platforms { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 22px; }

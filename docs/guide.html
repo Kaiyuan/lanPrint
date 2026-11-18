@@ -30,6 +30,7 @@
   <div class="layout">
     <aside class="toc">
       <a href="#install" data-i18n="toc_install">Installation</a>
+      <a href="#ui" data-i18n="toc_ui">Using the app</a>
       <a href="#host" data-i18n="toc_host">Share printers (host)</a>
       <a href="#client" data-i18n="toc_client">Add printers (client)</a>
       <a href="#scan" data-i18n="toc_scan">Scanning</a>
@@ -56,6 +57,21 @@ iwr -useb https://raw.githubusercontent.com/Kaiyuan/lanPrint/main/scripts/instal
 curl -fsSL https://raw.githubusercontent.com/Kaiyuan/lanPrint/main/scripts/install.sh | bash</code></pre>
       <div class="note" data-i18n="install_note">UOS 20 and Deepin 20 are supported. If the tray icon does not appear, enable the “Status Icon” / AppIndicator extension in the desktop settings.</div>
 
+      <h2 id="ui" data-i18n="ui_title">The main window</h2>
+      <p data-i18n="ui_intro">One window covers both roles. Click a host to expand its printers; use the toolbar to refresh, connect another host, or open settings.</p>
+      <figure class="shot">
+        <a href="images/guide/main-window.png" target="_blank" rel="noopener">
+          <img src="images/guide/main-window.png" alt="lanPrint main window with an expanded host and two connected printers" loading="lazy">
+        </a>
+        <figcaption data-i18n="shot_main">Click a host row to expand its connected printers.</figcaption>
+      </figure>
+      <figure class="shot">
+        <a href="images/guide/settings-general.png" target="_blank" rel="noopener">
+          <img src="images/guide/settings-general.png" alt="Settings general tab with appearance, language and host access code" loading="lazy">
+        </a>
+        <figcaption data-i18n="shot_general">Settings → General: appearance, language and the host access code.</figcaption>
+      </figure>
+
       <h2 id="host" data-i18n="host_title">Share printers from this computer</h2>
       <p data-i18n="host_intro">Every lanPrint instance can be a host. No Samba, IPP or WSD setup is involved.</p>
       <div class="steps">
@@ -64,6 +80,12 @@ curl -fsSL https://raw.githubusercontent.com/Kaiyuan/lanPrint/main/scripts/insta
         <div class="step"><h3 data-i18n="host_step3">Check the status bar</h3><p data-i18n="host_step3_desc">The status bar shows “Sharing on port 52333” and advertises the host over mDNS as <code>_lanprint._tcp.local.</code>.</p></div>
         <div class="step"><h3 data-i18n="host_step4">Scanning</h3><p data-i18n="host_step4_desc">All-in-one printers are detected automatically. Windows uses WIA, Linux and macOS use SANE (<code>scanimage</code>). Install the vendor driver if the scanner is not detected.</p></div>
       </div>
+      <figure class="shot">
+        <a href="images/guide/settings-printers.png" target="_blank" rel="noopener">
+          <img src="images/guide/settings-printers.png" alt="Settings shared printers tab with toggles for each local printer" loading="lazy">
+        </a>
+        <figcaption data-i18n="shot_printers">Settings → Shared printers: choose the printers other devices may use.</figcaption>
+      </figure>
       <div class="note" data-i18n="host_note">Changing the host access code immediately invalidates every previously issued client token.</div>
 
       <h2 id="client" data-i18n="client_title">Connect to a host and add printers</h2>
@@ -73,10 +95,22 @@ curl -fsSL https://raw.githubusercontent.com/Kaiyuan/lanPrint/main/scripts/insta
         <div class="step"><h3 data-i18n="client_step3">Add a printer</h3><p data-i18n="client_step3_desc">Select the host, choose a shared printer and click “Add”. lanPrint creates a local virtual queue and applies the preferences shared by the host. The printer appears in every application’s print dialog.</p></div>
         <div class="step"><h3 data-i18n="client_step4">Test and remove</h3><p data-i18n="client_step4_desc">Use “Test print” to verify the path. “Remove” deletes the local queue and stops forwarding. The host is not changed.</p></div>
       </div>
+      <figure class="shot">
+        <a href="images/guide/connect-host.png" target="_blank" rel="noopener">
+          <img src="images/guide/connect-host.png" alt="Connect a shared host dialog on the manual tab" loading="lazy">
+        </a>
+        <figcaption data-i18n="shot_connect">Connect device → Manual: enter a host address and access code, or enable the cloud bridge.</figcaption>
+      </figure>
       <div class="note" data-i18n="client_note">When the host is offline the printer is shown as offline and jobs stay in the local queue until the connection returns or the job is cancelled.</div>
 
       <h2 id="scan" data-i18n="scan_title">Scanning</h2>
       <p data-i18n="scan_intro">Printers that expose a scanner show a Scan button after they are added. Scanning runs on the host, where the device is physically connected, and the result is saved on the client.</p>
+      <figure class="shot">
+        <a href="images/guide/scan.png" target="_blank" rel="noopener">
+          <img src="images/guide/scan.png" alt="Scan dialog with resolution, colour and source options" loading="lazy">
+        </a>
+        <figcaption data-i18n="shot_scan">Scan: choose resolution, colour and source, then start the scan on the host.</figcaption>
+      </figure>
       <ul>
         <li data-i18n="scan_win">Windows: WIA is used. Flatbed and document feeder sources are supported when the driver exposes them.</li>
         <li data-i18n="scan_unix">Linux/macOS: SANE (<code>scanimage</code>) is used. Install <code>sane-utils</code> and the vendor backend.</li>
@@ -94,6 +128,12 @@ curl -fsSL https://raw.githubusercontent.com/Kaiyuan/lanPrint/main/scripts/insta
         <div class="step"><h3 data-i18n="cloud_step3">Connect on the client</h3><p data-i18n="cloud_step3_desc">Connect device → Enter manually → enable “Connect through a cloud bridge”, enter the bridge URL and share code, plus the host access code.</p></div>
         <div class="step"><h3 data-i18n="cloud_step4">Print</h3><p data-i18n="cloud_step4_desc">Add printers exactly as on the LAN. The host still verifies every printer access code; the bridge only relays traffic.</p></div>
       </div>
+      <figure class="shot">
+        <a href="images/guide/settings-cloud.png" target="_blank" rel="noopener">
+          <img src="images/guide/settings-cloud.png" alt="Settings cloud sharing tab with bridge URL and server access code" loading="lazy">
+        </a>
+        <figcaption data-i18n="shot_cloud">Settings → Cloud sharing: enter the bridge URL and server access code, then save.</figcaption>
+      </figure>
       <div class="note" data-i18n="cloud_note">The bridge sees connection metadata, so run it behind HTTPS. For maximum privacy, host it yourself.</div>
 
       <h2 id="faq" data-i18n="faq_title">Troubleshooting</h2>
