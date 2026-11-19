@@ -2,6 +2,7 @@
 # Keep in sync with the workspace rust-version in Cargo.toml.
 ARG RUST_VERSION=1.95
 FROM rust:${RUST_VERSION}-bookworm AS builder
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 WORKDIR /src
 
 # Cache dependency compilation
@@ -17,10 +18,12 @@ RUN mkdir -p crates/core/src crates/desktop/src crates/bridge/src \
 
 COPY crates ./crates
 COPY locales ./locales
-# The dependency-cache build compiled placeholder sources; drop those artifacts
-# so the real sources are always rebuilt (COPY keeps older mtimes).
-RUN cargo clean -p lanprint-bridge -p lanprint-core \
-    && cargo build --release -p lanprint-bridge --locked
+# The dependency-cache build compiled placeholder sources; drop those release
+# artifacts so the real sources are always rebuilt (COPY keeps older mtimes).
+# `cargo clean` needs --release, otherwise it only touches the dev profile.
+RUN cargo clean --release -p lanprint-bridge -p lanprint-core \
+    && cargo build --release -p lanprint-bridge --locked \
+    && target/release/lanprint-bridge --version | grep -q '^lanprint-bridge '
 
 FROM debian:bookworm-slim
 # hadolint ignore=DL3008
