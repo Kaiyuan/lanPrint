@@ -284,6 +284,24 @@ export global L {
     in-out property <string> remove-host: "Remove host";
     in-out property <string> all-printers-title: "All printers";
     in-out property <string> no-connected-printers: "No connected printers";
+
+    // Job settings dialog (applied on the host printer).
+    in-out property <string> job-settings: "Print settings";
+    in-out property <string> job-settings-hint: "These settings are applied by the host printer for every job from this device.";
+    in-out property <string> job-duplex: "Two-sided printing";
+    in-out property <string> job-duplex-off: "Off";
+    in-out property <string> job-duplex-long: "Long edge";
+    in-out property <string> job-duplex-short: "Short edge";
+    in-out property <string> job-booklet: "Booklet";
+    in-out property <string> job-booklet-hint: "Print two pages per side and fold the sheets like a book.";
+    in-out property <string> job-colour: "Colour";
+    in-out property <string> job-colour-on: "Colour";
+    in-out property <string> job-colour-off: "Monochrome";
+    in-out property <string> job-paper: "Paper";
+    in-out property <string> job-source: "Input tray";
+    in-out property <string> job-source-default: "Printer default";
+    in-out property <string> job-copies: "Copies";
+    in-out property <string> job-settings-saved: "Print settings saved";
 }
 
 
@@ -578,6 +596,107 @@ component Segmented inherits Rectangle {
     }
 }
 
+/// Compact dropdown used for paper sizes and input trays. The popup is a
+/// plain list so it keeps the app's look instead of the platform style.
+component Select inherits Rectangle {
+    in property <[string]> options;
+    in-out property <int> current: -1;
+    in property <string> unset-label: "";
+    callback changed(int);
+    height: 34px;
+    border-radius: 9px;
+    border-width: 1px;
+    border-color: pop.has-hover ? Theme.accent : Theme.border;
+    background: Theme.field;
+    Text {
+        x: 11px;
+        width: parent.width - 34px;
+        height: parent.height;
+        text: root.current >= 0 && root.current < root.options.length ? root.options[root.current] : root.unset-label;
+        color: root.current >= 0 ? Theme.text : Theme.tertiary;
+        font-size: 13px;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+    Text {
+        x: parent.width - 24px;
+        width: 16px;
+        height: parent.height;
+        text: "\u{25BE}";
+        color: Theme.muted;
+        font-size: 11px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+    pop := TouchArea {
+        clicked => { list.show(); }
+    }
+    list := PopupWindow {
+        x: 0px;
+        y: root.height + 4px;
+        width: root.width;
+        height: (root.unset-label == "" ? root.options.length : root.options.length + 1) * 30px + 8px;
+        close-policy: close-on-click-outside;
+        Rectangle {
+            background: Theme.panel;
+            border-radius: 10px;
+            border-width: 1px;
+            border-color: Theme.border;
+            drop-shadow-blur: 18px;
+            drop-shadow-offset-y: 6px;
+            drop-shadow-color: Theme.shadow;
+            VerticalLayout {
+                padding: 4px;
+                spacing: 0px;
+                if root.unset-label != "" : Rectangle {
+                    height: 30px;
+                    border-radius: 6px;
+                    background: none-ta.has-hover ? Theme.hover : #00000000;
+                    Text {
+                        x: 8px;
+                        width: parent.width - 16px;
+                        height: parent.height;
+                        text: root.unset-label;
+                        color: root.current < 0 ? Theme.accent : Theme.muted;
+                        font-size: 12px;
+                        vertical-alignment: center;
+                        overflow: elide;
+                    }
+                    none-ta := TouchArea {
+                        clicked => {
+                            root.current = -1;
+                            root.changed(-1);
+                            list.close();
+                        }
+                    }
+                }
+                for option[i] in root.options : Rectangle {
+                    height: 30px;
+                    border-radius: 6px;
+                    background: item-ta.has-hover ? Theme.hover : #00000000;
+                    Text {
+                        x: 8px;
+                        width: parent.width - 16px;
+                        height: parent.height;
+                        text: option;
+                        color: root.current == i ? Theme.accent : Theme.text;
+                        font-size: 13px;
+                        vertical-alignment: center;
+                        overflow: elide;
+                    }
+                    item-ta := TouchArea {
+                        clicked => {
+                            root.current = i;
+                            root.changed(i);
+                            list.close();
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 component NavItem inherits Rectangle {
     in property <string> label;
     in property <image> icon;
@@ -763,6 +882,23 @@ export component MainWindow inherits Window {
     in-out property <bool> first-run-open: false;
     in-out property <string> first-run-password: "";
 
+    // Per-printer job settings (stored on the client, applied on the host).
+    in-out property <bool> job-open: false;
+    in-out property <string> job-target: "";
+    in-out property <string> job-title-text: "";
+    in-out property <bool> job-has-duplex: false;
+    in-out property <bool> job-has-booklet: false;
+    in-out property <bool> job-has-color: false;
+    in-out property <int> job-duplex-index: 0;
+    in-out property <bool> job-booklet: false;
+    in-out property <int> job-color-index: 0;
+    in-out property <[string]> job-papers: [];
+    in-out property <int> job-paper-index: 0;
+    in-out property <[string]> job-sources: [];
+    in-out property <int> job-source-index: -1;
+    in-out property <int> job-copies: 1;
+    in-out property <int> job-max-copies: 99;
+
     callback refresh();
     callback open-connect();
     callback open-settings();
@@ -775,6 +911,8 @@ export component MainWindow inherits Window {
     callback remove-printer(string);
     callback test-print(string);
     callback open-preferences(string);
+    callback save-job-settings();
+    callback close-job-settings();
     callback open-scan(string);
     callback start-scan(string, int, int, int);
     callback test-connection(string, string, string, string, string, bool);
@@ -992,7 +1130,7 @@ export component MainWindow inherits Window {
                                 Rectangle { horizontal-stretch: 1; }
                                 if row.supports-scan : TextButton { text: L.scan; icon: @image-url("assets/icons/scan.svg"); has-icon: true; small: true; clicked => { root.open-scan(row.local-name); } }
                                 TextButton { text: L.print-test; icon: @image-url("assets/icons/printer.svg"); has-icon: true; small: true; clicked => { root.test-print(row.local-name); } }
-                                TextButton { text: L.preferences; icon: @image-url("assets/icons/sliders.svg"); has-icon: true; small: true; clicked => { root.open-preferences(row.local-name); } }
+                                TextButton { text: L.job-settings; icon: @image-url("assets/icons/sliders.svg"); has-icon: true; small: true; clicked => { root.open-preferences(row.local-name); } }
                                 TextButton { text: L.remove; icon: @image-url("assets/icons/trash.svg"); has-icon: true; small: true; clicked => { root.remove-printer(row.local-name); } }
                             }
                         }
@@ -1733,6 +1871,99 @@ export component MainWindow inherits Window {
                         enabled: !root.scan-busy;
                         clicked => { root.start-scan(root.scan-target, root.scan-resolution-index, root.scan-color-index, root.scan-source-index); }
                     }
+                }
+            }
+        }
+    }
+
+    // ------------------------------------------------------- job settings
+    if root.job-open : Rectangle {
+        width: parent.width;
+        height: parent.height;
+        background: Theme.overlay;
+        TouchArea { }
+        Rectangle {
+            width: 480px;
+            height: 540px;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            border-radius: 18px;
+            drop-shadow-blur: 32px;
+            drop-shadow-offset-y: 12px;
+            drop-shadow-color: Theme.shadow;
+            background: Theme.panel;
+            border-width: 1px;
+            border-color: Theme.border;
+            VerticalLayout {
+                padding: 20px;
+                spacing: 10px;
+                HorizontalLayout {
+                    Text { text: root.job-title-text; color: Theme.text; font-size: 16px; font-weight: 600; vertical-alignment: center; }
+                    Rectangle { horizontal-stretch: 1; }
+                    IconButton { text: "×"; clicked => { root.close-job-settings(); } }
+                }
+                MutedText { text: L.job-settings-hint; width: parent.width; wrap: word-wrap; }
+                Rectangle { height: 4px; }
+                if root.job-has-duplex : Text { text: L.job-duplex; color: Theme.muted; font-size: 11px; }
+                if root.job-has-duplex : Segmented {
+                    labels: [L.job-duplex-off, L.job-duplex-long, L.job-duplex-short];
+                    current: root.job-duplex-index;
+                    changed(i) => { root.job-duplex-index = i; }
+                }
+                if root.job-has-booklet : HorizontalLayout {
+                    spacing: 8px;
+                    VerticalLayout {
+                        Text { text: L.job-booklet; color: Theme.text; font-size: 13px; }
+                        MutedText { text: L.job-booklet-hint; wrap: word-wrap; }
+                    }
+                    Rectangle { horizontal-stretch: 1; }
+                    Switch {
+                        checked: root.job-booklet;
+                        toggled(v) => { root.job-booklet = v; }
+                    }
+                }
+                if root.job-has-color : Text { text: L.job-colour; color: Theme.muted; font-size: 11px; }
+                if root.job-has-color : Segmented {
+                    labels: [L.job-colour-on, L.job-colour-off];
+                    current: root.job-color-index;
+                    changed(i) => { root.job-color-index = i; }
+                }
+                Text { text: L.job-paper; color: Theme.muted; font-size: 11px; }
+                Select {
+                    options: root.job-papers;
+                    current: root.job-paper-index;
+                    changed(i) => { root.job-paper-index = i; }
+                }
+                if root.job-sources.length > 0 : Text { text: L.job-source; color: Theme.muted; font-size: 11px; }
+                if root.job-sources.length > 0 : Select {
+                    options: root.job-sources;
+                    current: root.job-source-index;
+                    unset-label: L.job-source-default;
+                    changed(i) => { root.job-source-index = i; }
+                }
+                HorizontalLayout {
+                    spacing: 10px;
+                    cross-axis-alignment: center;
+                    Text { text: L.job-copies; color: Theme.muted; font-size: 11px; vertical-alignment: center; }
+                    Rectangle { horizontal-stretch: 1; }
+                    IconButton {
+                        text: "−";
+                        enabled: root.job-copies > 1;
+                        clicked => { if (root.job-copies > 1) { root.job-copies = root.job-copies - 1; } }
+                    }
+                    Text { text: root.job-copies; color: Theme.text; font-size: 14px; font-weight: 600; width: 32px; horizontal-alignment: center; vertical-alignment: center; }
+                    IconButton {
+                        text: "+";
+                        enabled: root.job-copies < root.job-max-copies;
+                        clicked => { if (root.job-copies < root.job-max-copies) { root.job-copies = root.job-copies + 1; } }
+                    }
+                }
+                Rectangle { vertical-stretch: 1; }
+                HorizontalLayout {
+                    spacing: 8px;
+                    Rectangle { horizontal-stretch: 1; }
+                    TextButton { text: L.cancel; clicked => { root.close-job-settings(); } }
+                    TextButton { text: L.save; primary: true; clicked => { root.save-job-settings(); } }
                 }
             }
         }

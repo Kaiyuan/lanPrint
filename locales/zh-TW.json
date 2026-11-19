@@ -181,5 +181,21 @@
   "disconnect_all": "中斷所有印表機",
   "all_printers_title": "所有印表機",
   "no_connected_printers": "尚無已連線的印表機",
-  "remove_host": "移除主機"
+  "remove_host": "移除主機",
+  "job_settings": "列印設定",
+  "job_settings_hint": "由主機印表機套用至從此裝置送出的每個工作。",
+  "job_duplex": "雙面列印",
+  "job_duplex_off": "關閉",
+  "job_duplex_long": "長邊",
+  "job_duplex_short": "短邊",
+  "job_booklet": "小冊子",
+  "job_booklet_hint": "每面兩頁並以書冊方式摺疊，需要雙面列印。",
+  "job_colour": "色彩模式",
+  "job_colour_on": "彩色",
+  "job_colour_off": "黑白",
+  "job_paper": "紙張尺寸",
+  "job_source": "進紙匣",
+  "job_source_default": "印表機預設",
+  "job_copies": "份數",
+  "job_settings_saved": "列印設定已儲存"
 }

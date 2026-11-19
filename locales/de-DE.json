@@ -181,5 +181,21 @@
   "disconnect_all": "Alle Drucker trennen",
   "all_printers_title": "Alle Drucker",
   "no_connected_printers": "Keine verbundenen Drucker",
-  "remove_host": "Host entfernen"
+  "remove_host": "Host entfernen",
+  "job_settings": "Druckeinstellungen",
+  "job_settings_hint": "Wird vom Host-Drucker auf alle Aufträge dieses Geräts angewendet.",
+  "job_duplex": "Beidseitiger Druck",
+  "job_duplex_off": "Aus",
+  "job_duplex_long": "Lange Kante",
+  "job_duplex_short": "Kurze Kante",
+  "job_booklet": "Broschüre",
+  "job_booklet_hint": "Zwei Seiten pro Blatt, wie ein Buch gefaltet. Erfordert beidseitigen Druck.",
+  "job_colour": "Farbmodus",
+  "job_colour_on": "Farbe",
+  "job_colour_off": "Monochrom",
+  "job_paper": "Papierformat",
+  "job_source": "Papierfach",
+  "job_source_default": "Druckerstandard",
+  "job_copies": "Kopien",
+  "job_settings_saved": "Druckeinstellungen gespeichert"
 }

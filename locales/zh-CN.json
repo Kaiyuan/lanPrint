@@ -181,5 +181,21 @@
   "disconnect_all": "断开所有打印机",
   "all_printers_title": "所有打印机",
   "no_connected_printers": "暂无已连接的打印机",
-  "remove_host": "移除主机"
+  "remove_host": "移除主机",
+  "job_settings": "打印设置",
+  "job_settings_hint": "由主机打印机应用到来自此设备的每个任务。",
+  "job_duplex": "双面打印",
+  "job_duplex_off": "关闭",
+  "job_duplex_long": "长边",
+  "job_duplex_short": "短边",
+  "job_booklet": "小册子",
+  "job_booklet_hint": "每面两页并按书册方式折叠，需要双面打印。",
+  "job_colour": "色彩模式",
+  "job_colour_on": "彩色",
+  "job_colour_off": "黑白",
+  "job_paper": "纸张尺寸",
+  "job_source": "进纸盒",
+  "job_source_default": "打印机默认",
+  "job_copies": "份数",
+  "job_settings_saved": "打印设置已保存"
 }

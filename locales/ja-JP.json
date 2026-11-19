@@ -181,5 +181,21 @@
   "disconnect_all": "すべてのプリンターを切断",
   "all_printers_title": "すべてのプリンター",
   "no_connected_printers": "接続されたプリンターはありません",
-  "remove_host": "ホストを削除"
+  "remove_host": "ホストを削除",
+  "job_settings": "印刷設定",
+  "job_settings_hint": "このデバイスから送信されたすべてのジョブにホストのプリンターが適用します。",
+  "job_duplex": "両面印刷",
+  "job_duplex_off": "オフ",
+  "job_duplex_long": "長辺",
+  "job_duplex_short": "短辺",
+  "job_booklet": "小冊子",
+  "job_booklet_hint": "1 面に 2 ページを配置し、本のように折ります。両面印刷が必要です。",
+  "job_colour": "カラーモード",
+  "job_colour_on": "カラー",
+  "job_colour_off": "モノクロ",
+  "job_paper": "用紙サイズ",
+  "job_source": "給紙トレイ",
+  "job_source_default": "プリンターの既定",
+  "job_copies": "部数",
+  "job_settings_saved": "印刷設定を保存しました"
 }

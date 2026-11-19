@@ -181,5 +181,21 @@
   "disconnect_all": "모든 프린터 연결 해제",
   "all_printers_title": "모든 프린터",
   "no_connected_printers": "연결된 프린터가 없습니다",
-  "remove_host": "호스트 제거"
+  "remove_host": "호스트 제거",
+  "job_settings": "인쇄 설정",
+  "job_settings_hint": "이 장치에서 보낸 모든 작업에 호스트 프린터가 적용합니다.",
+  "job_duplex": "양면 인쇄",
+  "job_duplex_off": "사용 안 함",
+  "job_duplex_long": "긴 쪽",
+  "job_duplex_short": "짧은 쪽",
+  "job_booklet": "소책자",
+  "job_booklet_hint": "한 면에 두 페이지를 배치해 책처럼 접습니다. 양면 인쇄가 필요합니다.",
+  "job_colour": "색상 모드",
+  "job_colour_on": "컬러",
+  "job_colour_off": "흑백",
+  "job_paper": "용지 크기",
+  "job_source": "용지함",
+  "job_source_default": "프린터 기본값",
+  "job_copies": "매수",
+  "job_settings_saved": "인쇄 설정이 저장되었습니다"
 }

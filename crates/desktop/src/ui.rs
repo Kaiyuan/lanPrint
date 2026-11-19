@@ -6,9 +6,9 @@ use std::time::Duration;
 
 use lanprint_core::i18n::Translations;
 use lanprint_core::{
-    AppConfig, ClientPrinter, DiscoveredDevice, Language, ScanRequest, SharedPrinter,
+    AppConfig, ClientPrinter, DiscoveredDevice, DuplexMode, Language, ScanRequest, SharedPrinter,
 };
-use slint::{CloseRequestResponse, ComponentHandle, ModelRc, Timer, TimerMode, VecModel};
+use slint::{CloseRequestResponse, ComponentHandle, Model, ModelRc, Timer, TimerMode, VecModel};
 
 use crate::app::{App, AppEvent};
 use crate::autostart;
@@ -337,13 +337,146 @@ fn wire_callbacks(window: &MainWindow, tray: &TrayIcon, app: &Arc<App>) {
     });
 
     window.on_open_preferences({
+        let app = app.clone();
         let weak = weak.clone();
         move |local_name| {
-            if let Err(err) = platform::open_printer_preferences(local_name.as_str()) {
-                if let Some(window) = weak.upgrade() {
-                    show_toast(&window, &err.to_string());
+            let local_name = local_name.to_string();
+            let cfg = app.config.read();
+            let Some(cp) = cfg
+                .client_printers
+                .iter()
+                .find(|p| p.local_name == local_name)
+                .cloned()
+            else {
+                return;
+            };
+            drop(cfg);
+            let Some(window) = weak.upgrade() else { return };
+            let caps = &cp.capabilities;
+            let prefs = &cp.preferences;
+
+            let mut papers: Vec<String> = caps.papers.clone();
+            if !prefs.paper.is_empty()
+                && !papers.iter().any(|p| p.eq_ignore_ascii_case(&prefs.paper))
+            {
+                papers.insert(0, prefs.paper.clone());
+            }
+            if papers.is_empty() {
+                papers.push(prefs.paper.clone());
+            }
+            let paper_index = papers
+                .iter()
+                .position(|p| p.eq_ignore_ascii_case(&prefs.paper))
+                .unwrap_or(0) as i32;
+
+            let sources: Vec<String> = caps.sources.clone();
+            let source_index = if prefs.media_source.is_empty() {
+                -1
+            } else {
+                sources
+                    .iter()
+                    .position(|s| s.eq_ignore_ascii_case(&prefs.media_source))
+                    .map(|i| i as i32)
+                    .unwrap_or(-1)
+            };
+
+            let duplex_index = match prefs.duplex {
+                DuplexMode::Simplex => 0,
+                DuplexMode::LongEdge => 1,
+                DuplexMode::ShortEdge => 2,
+            };
+            let l = window.global::<L>();
+            window.set_job_title_text(slint::SharedString::from(format!(
+                "{} · {}",
+                l.get_job_settings(),
+                cp.display_name
+            )));
+            window.set_job_target(slint::SharedString::from(local_name.clone()));
+            window.set_job_has_duplex(caps.duplex);
+            window.set_job_has_booklet(caps.booklet);
+            window.set_job_has_color(caps.color);
+            window.set_job_duplex_index(duplex_index);
+            window.set_job_booklet(prefs.booklet);
+            window.set_job_color_index(if prefs.color { 0 } else { 1 });
+            window.set_job_papers(ModelRc::new(VecModel::from(
+                papers
+                    .into_iter()
+                    .map(slint::SharedString::from)
+                    .collect::<Vec<_>>(),
+            )));
+            window.set_job_paper_index(paper_index);
+            window.set_job_sources(ModelRc::new(VecModel::from(
+                sources
+                    .into_iter()
+                    .map(slint::SharedString::from)
+                    .collect::<Vec<_>>(),
+            )));
+            window.set_job_source_index(source_index);
+            window.set_job_copies(prefs.copies().min(99) as i32);
+            window.set_job_max_copies(if caps.max_copies > 1 {
+                caps.max_copies.min(99) as i32
+            } else {
+                99
+            });
+            window.set_job_open(true);
+        }
+    });
+
+    window.on_save_job_settings({
+        let app = app.clone();
+        let weak = weak.clone();
+        move || {
+            let Some(window) = weak.upgrade() else { return };
+            let local_name = window.get_job_target().to_string();
+            let cfg = app.config.read();
+            let Some(cp) = cfg
+                .client_printers
+                .iter()
+                .find(|p| p.local_name == local_name)
+                .cloned()
+            else {
+                return;
+            };
+            drop(cfg);
+            let mut prefs = cp.preferences.clone();
+            let papers = window.get_job_papers();
+            let paper_index = window.get_job_paper_index();
+            if paper_index >= 0 {
+                if let Some(paper) = papers.row_data(paper_index as usize) {
+                    prefs.paper = paper.to_string();
                 }
             }
+            prefs.duplex = if window.get_job_has_duplex() {
+                match window.get_job_duplex_index() {
+                    1 => DuplexMode::LongEdge,
+                    2 => DuplexMode::ShortEdge,
+                    _ => DuplexMode::Simplex,
+                }
+            } else {
+                DuplexMode::Simplex
+            };
+            prefs.booklet = window.get_job_booklet() && cp.capabilities.booklet;
+            if window.get_job_has_color() {
+                prefs.color = window.get_job_color_index() == 0;
+            }
+            let sources = window.get_job_sources();
+            let source_index = window.get_job_source_index();
+            prefs.media_source = if source_index >= 0 {
+                sources
+                    .row_data(source_index as usize)
+                    .map(|s| s.to_string())
+                    .unwrap_or_default()
+            } else {
+                String::new()
+            };
+            prefs.copies = (window.get_job_copies().max(1) as u32).min(99);
+            if let Err(err) = app.set_client_preferences(&local_name, prefs) {
+                show_toast(&window, &err.to_string());
+            } else {
+                let l = window.global::<L>();
+                show_toast(&window, l.get_job_settings_saved().as_str());
+            }
+            window.set_job_open(false);
         }
     });
 
@@ -782,6 +915,7 @@ fn wire_callbacks(window: &MainWindow, tray: &TrayIcon, app: &Arc<App>) {
                 window.set_settings_open(false);
                 window.set_password_open(false);
                 window.set_scan_open(false);
+                window.set_job_open(false);
                 window.set_first_run_open(false);
             }
         }
@@ -903,7 +1037,7 @@ fn refresh_ui(window: &MainWindow, app: &Arc<App>) {
                 supports_scan: p.supports_scan,
                 added: cp.is_some(),
                 has_password: p.has_password,
-                preferences: preferences_text(&p.preferences),
+                preferences: preferences_text(window, &p.preferences),
             }
         })
         .collect();
@@ -978,7 +1112,7 @@ fn refresh_ui(window: &MainWindow, app: &Arc<App>) {
                     || shared.map(|p| p.supports_scan).unwrap_or(false),
                 added: true,
                 has_password: shared.map(|p| p.has_password).unwrap_or(false),
-                preferences: preferences_text(&printer.preferences),
+                preferences: preferences_text(window, &printer.preferences),
             });
         }
     }
@@ -1054,23 +1188,31 @@ fn discovery_item(d: &DiscoveredDevice) -> DiscoveryItem {
     }
 }
 
-fn preferences_text(p: &lanprint_core::PrinterPreferences) -> slint::SharedString {
+fn preferences_text(
+    window: &MainWindow,
+    p: &lanprint_core::PrinterPreferences,
+) -> slint::SharedString {
+    let l = window.global::<L>();
     let mut parts = Vec::new();
     if !p.paper.is_empty() {
         parts.push(p.paper.clone());
     }
-    parts.push(if p.color {
-        "Color".into()
+    if p.booklet {
+        parts.push(l.get_job_booklet().to_string());
     } else {
-        "Mono".into()
+        parts.push(match p.duplex {
+            lanprint_core::DuplexMode::Simplex => l.get_job_duplex_off().to_string(),
+            lanprint_core::DuplexMode::LongEdge => l.get_job_duplex_long().to_string(),
+            lanprint_core::DuplexMode::ShortEdge => l.get_job_duplex_short().to_string(),
+        });
+    }
+    parts.push(if p.color {
+        l.get_job_colour_on().to_string()
+    } else {
+        l.get_job_colour_off().to_string()
     });
-    parts.push(match p.duplex {
-        lanprint_core::DuplexMode::Simplex => "Simplex".into(),
-        lanprint_core::DuplexMode::LongEdge => "Duplex".into(),
-        lanprint_core::DuplexMode::ShortEdge => "Duplex (short)".into(),
-    });
-    if p.resolution > 0 {
-        parts.push(format!("{} dpi", p.resolution));
+    if p.copies() > 1 {
+        parts.push(format!("{}×", p.copies()));
     }
     parts.join(" · ").into()
 }
@@ -1377,5 +1519,21 @@ fn apply_language(window: &MainWindow, language: Language) {
         set_remove_host = "remove_host",
         set_all_printers_title = "all_printers_title",
         set_no_connected_printers = "no_connected_printers",
+        set_job_settings = "job_settings",
+        set_job_settings_hint = "job_settings_hint",
+        set_job_duplex = "job_duplex",
+        set_job_duplex_off = "job_duplex_off",
+        set_job_duplex_long = "job_duplex_long",
+        set_job_duplex_short = "job_duplex_short",
+        set_job_booklet = "job_booklet",
+        set_job_booklet_hint = "job_booklet_hint",
+        set_job_colour = "job_colour",
+        set_job_colour_on = "job_colour_on",
+        set_job_colour_off = "job_colour_off",
+        set_job_paper = "job_paper",
+        set_job_source = "job_source",
+        set_job_source_default = "job_source_default",
+        set_job_copies = "job_copies",
+        set_job_settings_saved = "job_settings_saved",
     );
 }

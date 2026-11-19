@@ -181,5 +181,21 @@
   "disconnect_all": "Disconnect all printers",
   "all_printers_title": "All printers",
   "no_connected_printers": "No connected printers",
-  "remove_host": "Remove host"
+  "remove_host": "Remove host",
+  "job_settings": "Print settings",
+  "job_settings_hint": "Applied by the host printer to every job sent from this device.",
+  "job_duplex": "Two-sided printing",
+  "job_duplex_off": "Off",
+  "job_duplex_long": "Long edge",
+  "job_duplex_short": "Short edge",
+  "job_booklet": "Booklet",
+  "job_booklet_hint": "Two pages per side, folded like a book. Needs two-sided printing.",
+  "job_colour": "Colour mode",
+  "job_colour_on": "Colour",
+  "job_colour_off": "Monochrome",
+  "job_paper": "Paper size",
+  "job_source": "Input tray",
+  "job_source_default": "Printer default",
+  "job_copies": "Copies",
+  "job_settings_saved": "Print settings saved"
 }

@@ -181,5 +181,21 @@
   "disconnect_all": "Desconectar todas las impresoras",
   "all_printers_title": "Todas las impresoras",
   "no_connected_printers": "No hay impresoras conectadas",
-  "remove_host": "Eliminar host"
+  "remove_host": "Eliminar host",
+  "job_settings": "Configuración de impresión",
+  "job_settings_hint": "La impresora host las aplica a todos los trabajos enviados desde este dispositivo.",
+  "job_duplex": "Impresión a doble cara",
+  "job_duplex_off": "Desactivada",
+  "job_duplex_long": "Borde largo",
+  "job_duplex_short": "Borde corto",
+  "job_booklet": "Folleto",
+  "job_booklet_hint": "Dos páginas por cara, plegadas como un libro. Requiere impresión a doble cara.",
+  "job_colour": "Modo de color",
+  "job_colour_on": "Color",
+  "job_colour_off": "Monocromo",
+  "job_paper": "Tamaño de papel",
+  "job_source": "Bandeja de entrada",
+  "job_source_default": "Predeterminado de la impresora",
+  "job_copies": "Copias",
+  "job_settings_saved": "Configuración de impresión guardada"
 }

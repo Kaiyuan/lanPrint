@@ -181,5 +181,21 @@
   "disconnect_all": "Disconnetti tutte le stampanti",
   "all_printers_title": "Tutte le stampanti",
   "no_connected_printers": "Nessuna stampante connessa",
-  "remove_host": "Rimuovi host"
+  "remove_host": "Rimuovi host",
+  "job_settings": "Impostazioni di stampa",
+  "job_settings_hint": "Applicate dalla stampante host a ogni processo inviato da questo dispositivo.",
+  "job_duplex": "Stampa fronte-retro",
+  "job_duplex_off": "Disattivata",
+  "job_duplex_long": "Bordo lungo",
+  "job_duplex_short": "Bordo corto",
+  "job_booklet": "Libretto",
+  "job_booklet_hint": "Due pagine per lato, piegate come un libro. Richiede la stampa fronte-retro.",
+  "job_colour": "Modalità colore",
+  "job_colour_on": "Colore",
+  "job_colour_off": "Monocromatico",
+  "job_paper": "Formato carta",
+  "job_source": "Vassoio di alimentazione",
+  "job_source_default": "Predefinito stampante",
+  "job_copies": "Copie",
+  "job_settings_saved": "Impostazioni di stampa salvate"
 }

@@ -181,5 +181,21 @@
   "disconnect_all": "Déconnecter toutes les imprimantes",
   "all_printers_title": "Toutes les imprimantes",
   "no_connected_printers": "Aucune imprimante connectée",
-  "remove_host": "Supprimer l'hôte"
+  "remove_host": "Supprimer l'hôte",
+  "job_settings": "Paramètres d'impression",
+  "job_settings_hint": "Appliqués par l'imprimante hôte à chaque tâche envoyée depuis cet appareil.",
+  "job_duplex": "Impression recto-verso",
+  "job_duplex_off": "Désactivé",
+  "job_duplex_long": "Bord long",
+  "job_duplex_short": "Bord court",
+  "job_booklet": "Livret",
+  "job_booklet_hint": "Deux pages par face, pliées comme un livre. Nécessite le recto-verso.",
+  "job_colour": "Mode couleur",
+  "job_colour_on": "Couleur",
+  "job_colour_off": "Monochrome",
+  "job_paper": "Format du papier",
+  "job_source": "Bac d'alimentation",
+  "job_source_default": "Par défaut de l'imprimante",
+  "job_copies": "Copies",
+  "job_settings_saved": "Paramètres d'impression enregistrés"
 }
