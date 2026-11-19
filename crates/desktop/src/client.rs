@@ -82,6 +82,7 @@ impl HostLink {
         device_id: &str,
         device_name: &str,
     ) -> Result<AuthResponse> {
+        let password = password.trim_end_matches(['\r', '\n']);
         let body = serde_json::to_vec(&AuthRequest {
             password: password.to_string(),
             device_id: device_id.to_string(),
@@ -126,6 +127,7 @@ impl HostLink {
         device_id: &str,
         device_name: &str,
     ) -> Result<PrinterTokenResponse> {
+        let password = password.trim_end_matches(['\r', '\n']);
         let body = serde_json::to_vec(&PrinterTokenRequest {
             password: password.to_string(),
             device_id: device_id.to_string(),

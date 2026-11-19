@@ -21,3 +21,4 @@ base64.workspace = true
 dirs.workspace = true
 tracing.workspace = true
 mdns-sd.workspace = true
+unicode-normalization.workspace = true

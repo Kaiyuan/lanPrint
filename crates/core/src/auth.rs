@@ -7,8 +7,13 @@ use base64::Engine;
 use hmac::{Hmac, Mac};
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
+use unicode_normalization::UnicodeNormalization;
 
 type HmacSha256 = Hmac<Sha256>;
+
+fn normalized(password: &str) -> String {
+    password.nfc().collect()
+}
 
 #[derive(Debug, thiserror::Error)]
 pub enum AuthError {
@@ -41,6 +46,7 @@ impl PasswordHash {
             .map_err(|e| AuthError::Internal(format!("argon2 params: {e}")))?;
         let argon = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
         let salt = SaltString::generate(&mut OsRng);
+        let password = normalized(password);
         let hash = argon
             .hash_password(password.as_bytes(), &salt)
             .map_err(|e| AuthError::Internal(format!("hash password: {e}")))?;
@@ -57,9 +63,23 @@ impl PasswordHash {
         let Ok(parsed) = ArgonHash::new(&self.0) else {
             return false;
         };
-        Argon2::default()
-            .verify_password(password.as_bytes(), &parsed)
-            .is_ok()
+        let check = |candidate: &str| {
+            Argon2::default()
+                .verify_password(candidate.as_bytes(), &parsed)
+                .is_ok()
+        };
+        // Try the bytes as entered first so hashes created before Unicode
+        // normalisation keep working, then the NFC form (macOS may send NFD),
+        // then a trimmed form for stray newlines from password fields.
+        if check(password) {
+            return true;
+        }
+        let normalized = normalized(password);
+        if normalized != password && check(&normalized) {
+            return true;
+        }
+        let trimmed = normalized.trim();
+        trimmed != normalized && check(trimmed)
     }
 
     pub fn into_string(self) -> String {
@@ -212,5 +232,15 @@ mod tests {
         let secret = b"0123456789abcdef0123456789abcdef";
         let token = issue_token(secret, &TokenClaims::host("dev-1", 60));
         assert!(authorize_host(secret, &token, "dev-2").is_err());
+    }
+
+    #[test]
+    fn password_accepts_nfd_and_stray_newline() {
+        // NFC "Café" hashed on Windows, NFD "Cafe\u{301}" sent by macOS.
+        let hash = PasswordHash::create("Café").unwrap();
+        assert!(hash.verify("Café"));
+        assert!(hash.verify("Cafe\u{301}"));
+        assert!(hash.verify("Café\r\n"));
+        assert!(!hash.verify("Cafe"));
     }
 }
