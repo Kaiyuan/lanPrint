@@ -602,27 +602,3 @@ pub fn log_dir() -> PathBuf {
         .join("lanPrint")
         .join("logs")
 }
-
-#[cfg(test)]
-mod cap_tests {
-    #[test]
-    fn dump_local_capabilities() {
-        if std::env::var("LANPRINT_DUMP_CAPS").is_err() {
-            return;
-        }
-        for printer in super::list_printers().expect("list printers") {
-            eprintln!(
-                "{} | driver={} | color={} duplex={} papers={:?} sources={:?} modes={:?} copies={} resolutions={:?}",
-                printer.name,
-                printer.driver,
-                printer.capabilities.color,
-                printer.capabilities.duplex,
-                printer.capabilities.papers,
-                printer.capabilities.sources,
-                printer.capabilities.duplex_modes,
-                printer.capabilities.max_copies,
-                printer.capabilities.resolutions
-            );
-        }
-    }
-}

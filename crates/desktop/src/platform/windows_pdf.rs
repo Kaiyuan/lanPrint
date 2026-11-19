@@ -845,6 +845,7 @@ pub fn driver_caps(printer: &str, port: &str) -> DriverCaps {
             caps.preferences.color = true;
         }
         if dm.dmFields & DM_DUPLEX as DWORD != 0 {
+            caps.duplex = Some(true);
             caps.preferences.duplex = match dm.dmDuplex as u32 {
                 DMDUP_VERTICAL => DuplexMode::LongEdge,
                 DMDUP_HORIZONTAL => DuplexMode::ShortEdge,
