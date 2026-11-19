@@ -92,7 +92,7 @@ curl -fsSL https://raw.githubusercontent.com/Kaiyuan/lanPrint/main/scripts/insta
       <div class="steps">
         <div class="step"><h3 data-i18n="client_step1">Scan or enter the address</h3><p data-i18n="client_step1_desc">Click “Connect device”. lanPrint scans the LAN with mDNS. If the host is on another subnet, click “Enter manually” and type its device name or IP address.</p></div>
         <div class="step"><h3 data-i18n="client_step2">Test and save</h3><p data-i18n="client_step2_desc">Enter the host access code, click “Test connection”, then “Save”. The host appears in the device list with an online indicator.</p></div>
-        <div class="step"><h3 data-i18n="client_step3">Add a printer</h3><p data-i18n="client_step3_desc">Select the host, choose a shared printer and click “Add”. lanPrint creates a local virtual queue and applies the preferences shared by the host. The printer appears in every application’s print dialog.</p></div>
+        <div class="step"><h3 data-i18n="client_step3">Add a printer</h3><p data-i18n="client_step3_desc">Select the host, choose a shared printer and click “Add”. lanPrint creates a local virtual queue that renders jobs to PDF and forwards them to the host. The printer appears in every application’s print dialog.</p></div>
         <div class="step"><h3 data-i18n="client_step4">Test and remove</h3><p data-i18n="client_step4_desc">Use “Test print” to verify the path. “Remove” deletes the local queue and stops forwarding. The host is not changed.</p></div>
       </div>
       <figure class="shot">
@@ -163,7 +163,7 @@ curl -fsSL https://raw.githubusercontent.com/Kaiyuan/lanPrint/main/scripts/insta
       </details>
       <details class="card" style="margin:12px 0;">
         <summary data-i18n="faq4_q">The client prints but the page is blank</summary>
-        <p data-i18n="faq4_a">The host needs a driver that can consume the job format. For Windows hosts, install the same printer driver as the client when possible. PDF jobs are opened with the system PDF handler; install one if Windows 7 has none.</p>
+        <p data-i18n="faq4_a">lanPrint sends PDF to the host and the host renders each page and prints it with the real printer driver, so no PDF reader is needed. If pages are still blank, check that the printer driver is installed on the host and that the host prints a test page locally.</p>
       </details>
       <details class="card" style="margin:12px 0;">
         <summary data-i18n="faq5_q">Scanner not detected</summary>
