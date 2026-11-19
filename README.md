@@ -68,7 +68,9 @@ scripts/                   一键安装脚本（客户端 / 服务端）
 
 ### Windows 7 / 8 / 10 / 11
 
-从 [Releases](https://github.com/Kaiyuan/lanPrint/releases) 下载 `lanPrint_*_Windows_x86_64.zip`，解压后运行 `lanPrint.exe`。程序会驻留通知区域，并默认加入开机启动。
+从 [Releases](https://github.com/Kaiyuan/lanPrint/releases) 下载 `lanPrint-*-setup.exe` 安装包并运行。推荐使用安装包：它会安装到 Program Files，为 `lanPrint.exe` 添加入站防火墙规则（TCP 52333 的 API 与 mDNS 发现），启用托盘开机自启并启动程序。
+
+便携版 `lanPrint_*_Windows_x86_64.zip` 仍会发布。使用时解压到任意目录，并在防火墙提示中允许 lanPrint，否则客户端无法连接。
 
 PowerShell 一键安装（当前用户）：
 

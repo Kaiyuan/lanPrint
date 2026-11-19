@@ -64,7 +64,9 @@ scripts/                   One-line installers
 
 ### Windows 7 / 8 / 10 / 11
 
-Download `lanPrint_*_Windows_x86_64.zip` from [Releases](https://github.com/Kaiyuan/lanPrint/releases), extract and run `lanPrint.exe`. It starts in the notification area and enables autostart by default.
+Download `lanPrint-*-setup.exe` from [Releases](https://github.com/Kaiyuan/lanPrint/releases) and run it. The installer is the recommended way: it installs into Program Files, adds an inbound Windows Firewall rule for `lanPrint.exe` (API on TCP 52333 and mDNS discovery), enables autostart in the tray and starts the app.
+
+The portable `lanPrint_*_Windows_x86_64.zip` is still published. If you use it, extract it anywhere and allow lanPrint in the Windows Firewall prompt, otherwise clients cannot connect.
 
 ```powershell
 iwr -useb https://raw.githubusercontent.com/Kaiyuan/lanPrint/main/scripts/install.ps1 | iex

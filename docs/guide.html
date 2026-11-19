@@ -44,8 +44,8 @@
       <p data-i18n="install_intro">lanPrint is a single native binary. It starts in the system tray and keeps a small local API listening on port 52333.</p>
 
       <h3>Windows 7 / 8 / 10 / 11</h3>
-      <p data-i18n="install_win">Download the Windows zip from Releases, extract it and run <code>lanPrint.exe</code>. The app adds itself to the startup entry on first run and shows an icon in the notification area. Allow it through Windows Firewall when prompted so clients can connect.</p>
-      <pre><code><span class="c"># PowerShell (per user install)</span>
+      <p data-i18n="install_win">Download lanPrint-*-setup.exe from Releases and run it. The installer copies lanPrint to Program Files, adds an inbound Windows Firewall rule for lanPrint.exe (API on TCP 52333 and mDNS discovery), enables autostart in the tray and starts the app. The portable lanPrint_*_Windows_x86_64.zip still works, but there you must allow the firewall prompt yourself, so the installer is recommended.</p>
+      <pre><code><span class="c"># PowerShell one-line installer (per user)</span>
 iwr -useb https://raw.githubusercontent.com/Kaiyuan/lanPrint/main/scripts/install.ps1 | iex</code></pre>
 
       <h3>macOS 10.15+</h3>

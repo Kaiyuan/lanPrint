@@ -25,7 +25,9 @@ SolidCompression=yes
 WizardStyle=modern
 ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=6.1sp1
-PrivilegesRequired=lowest
+; Admin rights are required to install into Program Files and to add the
+; inbound firewall rule. Users can still pick a per-user install in the dialog.
+PrivilegesRequired=admin
 PrivilegesRequiredOverridesAllowed=dialog
 UninstallDisplayIcon={app}\lanPrint.exe
 SetupIconFile=..\..\crates\desktop\ui\assets\lanprint-icon.ico
@@ -53,7 +55,12 @@ Name: "{autodesktop}\lanPrint"; Filename: "{app}\lanPrint.exe"; Tasks: desktopic
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "lanPrint"; ValueData: """{app}\lanPrint.exe"" --tray"; Flags: uninsdeletevalue; Tasks: autostart
 
 [Run]
+; Allow inbound connections from clients and mDNS discovery. The rule is
+; tied to lanPrint.exe so it keeps working after updates.
+Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""lanPrint"""; Flags: runhidden ignoreerrors; StatusMsg: "Updating the Windows Firewall rule..."
+Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall add rule name=""lanPrint"" dir=in action=allow program=""{app}\lanPrint.exe"" enable=yes profile=any"; Flags: runhidden ignoreerrors; StatusMsg: "Adding the Windows Firewall rule..."
 Filename: "{app}\lanPrint.exe"; Description: "{cm:LaunchProgram,lanPrint}"; Flags: nowait postinstall skipifsilent
 
 [UninstallRun]
+Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""lanPrint"""; Flags: runhidden ignoreerrors; RunOnceId: "RemoveFirewallRule"
 Filename: "{cmd}"; Parameters: "/C taskkill /IM lanPrint.exe /F >NUL 2>&1"; Flags: runhidden; RunOnceId: "StopLanPrint"
