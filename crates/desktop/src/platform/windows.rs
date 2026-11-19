@@ -425,10 +425,12 @@ pub fn install_remote_printer(
     local_name: &str,
     display_name: &str,
     driver: &str,
+    id: u32,
     tcp_port: u16,
     prefs: &PrinterPreferences,
 ) -> Result<()> {
     let port_name = format!("lanPrint-{tcp_port}");
+    let ipp_url = crate::ipp::http_uri(id);
     let script = r#"
 $ErrorActionPreference = 'Stop'
 $portName = '__PORT_NAME__'
@@ -438,6 +440,8 @@ $driver = '__DRIVER__'
 $paper = '__PAPER__'
 $color = __COLOR__
 $duplex = '__DUPLEX__'
+$ippUrl = '__IPP_URL__'
+$ippReady = __IPP_READY__
 try {
   Add-PrinterPort -Name $portName -PrinterHostAddress '127.0.0.1' -PortNumber $port -ErrorAction Stop
 } catch {
@@ -446,25 +450,42 @@ try {
 }
 $installed = @()
 try { $installed = @(Get-PrinterDriver | Select-Object -ExpandProperty Name) } catch {}
-if ($driver -and -not ($installed -contains $driver)) {
-  try { Add-PrinterDriver -Name $driver -ErrorAction Stop; $installed += $driver } catch {}
-}
 try { Remove-Printer -Name $localName -ErrorAction SilentlyContinue } catch {}
-$candidates = @()
-if ($driver) { $candidates += $driver }
-$candidates += 'Microsoft Print To PDF'
-$candidates += 'Generic / Text Only'
 $added = $false
-foreach ($candidate in $candidates) {
-  if (-not ($installed -contains $candidate)) { continue }
+$ippDriver = 'Microsoft IPP Class Driver'
+if ($ippReady -and ($installed -contains $ippDriver)) {
   try {
-    Add-Printer -Name $localName -DriverName $candidate -PortName $portName -ErrorAction Stop
-    $added = $true
-    break
+    Add-PrinterPort -Name $ippUrl -ErrorAction SilentlyContinue | Out-Null
   } catch {}
+  try {
+    Add-Printer -Name $localName -DriverName $ippDriver -PortName $ippUrl -ErrorAction Stop
+    $added = $true
+  } catch {}
+  if (-not $added) {
+    rundll32 printui.dll,PrintUIEntry /if /b "$localName" /f "$env:WINDIR\inf\ntprint.inf" /r "$ippUrl" /m "$ippDriver"
+    if (Get-Printer -Name $localName -ErrorAction SilentlyContinue) { $added = $true }
+  }
 }
 if (-not $added) {
-  rundll32 printui.dll,PrintUIEntry /if /b "$localName" /f "$env:WINDIR\inf\ntprint.inf" /r "$portName" /m "Generic / Text Only"
+  try { Remove-Printer -Name $localName -ErrorAction SilentlyContinue } catch {}
+  if ($driver -and -not ($installed -contains $driver)) {
+    try { Add-PrinterDriver -Name $driver -ErrorAction Stop; $installed += $driver } catch {}
+  }
+  $candidates = @()
+  if ($driver) { $candidates += $driver }
+  $candidates += 'Microsoft Print To PDF'
+  $candidates += 'Generic / Text Only'
+  foreach ($candidate in $candidates) {
+    if (-not ($installed -contains $candidate)) { continue }
+    try {
+      Add-Printer -Name $localName -DriverName $candidate -PortName $portName -ErrorAction Stop
+      $added = $true
+      break
+    } catch {}
+  }
+  if (-not $added) {
+    rundll32 printui.dll,PrintUIEntry /if /b "$localName" /f "$env:WINDIR\inf\ntprint.inf" /r "$portName" /m "Generic / Text Only"
+  }
 }
 try {
   Set-PrintConfiguration -PrinterName $localName -PaperSize $paper -Color:$color -Duplexing $duplex -ErrorAction Stop
@@ -476,7 +497,16 @@ try {
     .replace("__DRIVER__", &ps_quote(driver))
     .replace("__PAPER__", &ps_quote(&prefs.paper))
     .replace("__COLOR__", if prefs.color { "$true" } else { "$false" })
-    .replace("__DUPLEX__", duplex_setting(prefs));
+    .replace("__DUPLEX__", duplex_setting(prefs))
+    .replace("__IPP_URL__", &ps_quote(&ipp_url))
+    .replace(
+        "__IPP_READY__",
+        if crate::ipp::available() {
+            "$true"
+        } else {
+            "$false"
+        },
+    );
     powershell(&script)?;
     debug!("installed Windows virtual printer {local_name} on {port_name} ({display_name})");
     Ok(())
@@ -506,46 +536,6 @@ pub fn apply_printer_preferences(local_name: &str, prefs: &PrinterPreferences) -
         "$ErrorActionPreference='Stop'; Set-PrintConfiguration {} | Out-Null",
         args.join(" ")
     );
-    powershell(&script).map(|_| ())
-}
-
-/// Switch an existing queue to the host printer's driver when it is installed
-/// on this machine, so the Windows print dialog exposes the same features.
-pub fn sync_printer_driver(
-    local_name: &str,
-    driver: &str,
-    prefs: &PrinterPreferences,
-) -> Result<()> {
-    if driver.is_empty() {
-        return Ok(());
-    }
-    let paper = if prefs.paper.is_empty() {
-        String::new()
-    } else {
-        format!("-PaperSize '{}'", ps_quote(&prefs.paper))
-    };
-    let script = r#"
-$ErrorActionPreference = 'Stop'
-$name = '__NAME__'
-$driver = '__DRIVER__'
-try { $current = (Get-Printer -Name $name -ErrorAction Stop).DriverName } catch { exit 0 }
-if ($current -eq $driver) { exit 0 }
-$installed = @()
-try { $installed = @(Get-PrinterDriver | Select-Object -ExpandProperty Name) } catch {}
-if (-not ($installed -contains $driver)) {
-  try { Add-PrinterDriver -Name $driver -ErrorAction Stop; $installed += $driver } catch {}
-}
-if (-not ($installed -contains $driver)) { exit 0 }
-try { Set-Printer -Name $name -DriverName $driver -ErrorAction Stop } catch { exit 0 }
-try {
-  Set-PrintConfiguration -PrinterName $name __PAPER__ -Color:__COLOR__ -Duplexing __DUPLEX__ -ErrorAction Stop
-} catch {}
-"#
-    .replace("__NAME__", &ps_quote(local_name))
-    .replace("__DRIVER__", &ps_quote(driver))
-    .replace("__PAPER__", &paper)
-    .replace("__COLOR__", if prefs.color { "$true" } else { "$false" })
-    .replace("__DUPLEX__", duplex_setting(prefs));
     powershell(&script).map(|_| ())
 }
 

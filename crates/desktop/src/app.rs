@@ -100,6 +100,16 @@ impl App {
         self.update.lock().ok().and_then(|update| update.clone())
     }
 
+    /// Client printer by its numeric id, used by the IPP endpoint.
+    pub fn client_printer(&self, id: u32) -> Option<ClientPrinter> {
+        self.config
+            .read()
+            .client_printers
+            .iter()
+            .find(|printer| printer.id == id)
+            .cloned()
+    }
+
     pub fn set_auto_update(self: &Arc<Self>, enabled: bool) {
         self.config.edit(|cfg| cfg.auto_update = enabled);
         if enabled {
@@ -252,6 +262,27 @@ impl App {
             let _ = self.refresh_device(&device.id).await;
         }
         self.start_cloud_host().await;
+
+        let ipp = self.clone();
+        tokio::spawn(async move {
+            if let Err(err) = crate::ipp::serve(ipp).await {
+                warn!("IPP endpoint unavailable: {err}");
+            }
+        });
+
+        #[cfg(unix)]
+        if !std::env::args().any(|arg| arg == "--tray") {
+            let upgrader = self.clone();
+            tokio::spawn(async move {
+                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                let printers = upgrader.config.read().client_printers.clone();
+                for printer in printers {
+                    if let Err(err) = platform::upgrade_ipp_queue(&printer.local_name, printer.id) {
+                        debug!("IPP upgrade for {} failed: {err}", printer.local_name);
+                    }
+                }
+            });
+        }
 
         let updater = self.clone();
         tokio::spawn(async move {
@@ -680,45 +711,6 @@ impl App {
             .unwrap()
             .remote_printers
             .insert(device_id.to_string(), printers);
-        #[cfg(windows)]
-        {
-            let mut pending = Vec::new();
-            {
-                let mut done = driver_sync_done().lock().unwrap();
-                let cfg = self.config.read();
-                let host_is_windows = cfg
-                    .remote_devices
-                    .iter()
-                    .find(|d| d.id == device_id)
-                    .map(|d| d.os.eq_ignore_ascii_case("windows"))
-                    .unwrap_or(false);
-                if host_is_windows {
-                    for cp in cfg
-                        .client_printers
-                        .iter()
-                        .filter(|cp| cp.device_id == device_id)
-                    {
-                        let driver = cp.capabilities.make_model.clone();
-                        if driver.is_empty() || !done.insert(cp.local_name.clone()) {
-                            continue;
-                        }
-                        pending.push((cp.local_name.clone(), driver, cp.preferences.clone()));
-                    }
-                }
-            }
-            for (local_name, driver, prefs) in pending {
-                let name = local_name.clone();
-                match tokio::task::spawn_blocking(move || {
-                    platform::sync_printer_driver(&name, &driver, &prefs)
-                })
-                .await
-                {
-                    Ok(Ok(())) => debug!("queue driver checked for {local_name}"),
-                    Ok(Err(err)) => debug!("could not switch {local_name} driver: {err}"),
-                    Err(err) => debug!("driver sync task failed for {local_name}: {err}"),
-                }
-            }
-        }
         self.emit(AppEvent::Refresh);
         Ok(())
     }
@@ -856,26 +848,37 @@ impl App {
             )
         };
 
+        let mut cp = ClientPrinter {
+            id,
+            local_name: local_name.clone(),
+            remote_name: printer_name.clone(),
+            display_name: display.clone(),
+            device_id: device_id.clone(),
+            device_name: device.name.clone(),
+            token: printer_token.token.clone(),
+            token_exp: printer_token.expires_at,
+            supports_scan,
+            online: true,
+            installed: false,
+            preferences: prefs.clone(),
+            capabilities: capabilities.clone(),
+            last_error: String::new(),
+        };
+        // Register the printer before installing the queue: the IPP endpoint
+        // must answer capability queries while CUPS or Windows creates it.
+        self.config.edit(|cfg| cfg.client_printers.push(cp.clone()));
+
         #[cfg(windows)]
         {
             let app = self.clone();
-            let client_printer = ClientPrinter {
-                id,
-                local_name: local_name.clone(),
-                remote_name: printer_name.clone(),
-                display_name: display.clone(),
-                device_id: device_id.clone(),
-                device_name: device.name.clone(),
-                token: printer_token.token.clone(),
-                token_exp: printer_token.expires_at,
-                supports_scan,
-                online: true,
-                installed: false,
-                preferences: prefs.clone(),
-                capabilities: capabilities.clone(),
-                last_error: String::new(),
+            let forwarder = match Forwarder::start(app, cp.clone(), tcp_port).await {
+                Ok(forwarder) => forwarder,
+                Err(err) => {
+                    self.config
+                        .edit(|cfg| cfg.client_printers.retain(|printer| printer.id != id));
+                    return Err(err);
+                }
             };
-            let forwarder = Forwarder::start(app, client_printer, tcp_port).await?;
             self.forwarders.lock().await.insert(id, forwarder);
         }
 
@@ -883,6 +886,7 @@ impl App {
             &local_name,
             &display,
             &queue_driver,
+            id,
             tcp_port,
             &uri,
             &prefs,
@@ -893,26 +897,17 @@ impl App {
                     handle.stop();
                 }
             }
+            self.config
+                .edit(|cfg| cfg.client_printers.retain(|printer| printer.id != id));
             return Err(err);
         }
 
-        let cp = ClientPrinter {
-            id,
-            local_name: local_name.clone(),
-            remote_name: printer_name,
-            display_name: display,
-            device_id: device_id.clone(),
-            device_name: device.name,
-            token: printer_token.token,
-            token_exp: printer_token.expires_at,
-            supports_scan,
-            online: true,
-            installed: true,
-            preferences: prefs,
-            capabilities,
-            last_error: String::new(),
-        };
-        self.config.edit(|cfg| cfg.client_printers.push(cp.clone()));
+        cp.installed = true;
+        self.config.edit(|cfg| {
+            if let Some(printer) = cfg.client_printers.iter_mut().find(|p| p.id == id) {
+                printer.installed = true;
+            }
+        });
         self.emit(AppEvent::Refresh);
         Ok(cp)
     }
@@ -1329,13 +1324,6 @@ fn update_asset(version: &str, assets: &[(String, String)]) -> Option<(String, S
     {
         None
     }
-}
-
-#[cfg(windows)]
-fn driver_sync_done() -> &'static std::sync::Mutex<std::collections::HashSet<String>> {
-    static DONE: std::sync::OnceLock<std::sync::Mutex<std::collections::HashSet<String>>> =
-        std::sync::OnceLock::new();
-    DONE.get_or_init(|| std::sync::Mutex::new(std::collections::HashSet::new()))
 }
 
 fn unique_local_name(cfg: &AppConfig, device: &str, display: &str, id: u32) -> String {

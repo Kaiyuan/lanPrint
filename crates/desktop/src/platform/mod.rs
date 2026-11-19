@@ -56,6 +56,7 @@ pub fn install_remote_printer(
     local_name: &str,
     display_name: &str,
     driver: &str,
+    id: u32,
     tcp_port: u16,
     uri: &str,
     prefs: &PrinterPreferences,
@@ -63,11 +64,11 @@ pub fn install_remote_printer(
     #[cfg(windows)]
     {
         let _ = uri;
-        imp::install_remote_printer(local_name, display_name, driver, tcp_port, prefs)
+        imp::install_remote_printer(local_name, display_name, driver, id, tcp_port, prefs)
     }
     #[cfg(unix)]
     {
-        imp::install_remote_printer(local_name, display_name, driver, tcp_port, uri, prefs)
+        imp::install_remote_printer(local_name, display_name, driver, id, tcp_port, uri, prefs)
     }
 }
 
@@ -80,28 +81,24 @@ pub fn launch_update(path: &Path) -> Result<()> {
     imp::launch_update(path)
 }
 
+/// Move an existing client queue to the local IPP endpoint (macOS/Linux).
+#[allow(dead_code)]
+pub fn upgrade_ipp_queue(local_name: &str, id: u32) -> Result<()> {
+    #[cfg(unix)]
+    {
+        imp::upgrade_ipp_queue(local_name, id)
+    }
+    #[cfg(windows)]
+    {
+        let _ = (local_name, id);
+        Ok(())
+    }
+}
+
 /// Update the local queue defaults so the system print dialog starts from the
 /// same settings as the lanPrint dialog.
 pub fn apply_printer_preferences(local_name: &str, prefs: &PrinterPreferences) -> Result<()> {
     imp::apply_printer_preferences(local_name, prefs)
-}
-
-/// Switch an existing Windows queue to the host printer's driver when that
-/// driver is available locally. No-op on other platforms.
-pub fn sync_printer_driver(
-    local_name: &str,
-    driver: &str,
-    prefs: &PrinterPreferences,
-) -> Result<()> {
-    #[cfg(windows)]
-    {
-        imp::sync_printer_driver(local_name, driver, prefs)
-    }
-    #[cfg(unix)]
-    {
-        let _ = (local_name, driver, prefs);
-        Ok(())
-    }
 }
 
 pub fn open_path(path: &Path) -> Result<()> {

@@ -378,10 +378,39 @@ pub fn install_remote_printer(
     local_name: &str,
     display_name: &str,
     driver: &str,
+    id: u32,
     _tcp_port: u16,
     uri: &str,
     prefs: &PrinterPreferences,
 ) -> Result<()> {
+    // Prefer driverless IPP: CUPS queries our local IPP endpoint and builds a
+    // PPD with the host printer's real sides, colour, media and tray options.
+    if crate::ipp::available() {
+        let ipp_uri = crate::ipp::cups_uri(id);
+        let args: Vec<String> = vec![
+            "-p".into(),
+            local_name.into(),
+            "-E".into(),
+            "-v".into(),
+            ipp_uri,
+            "-m".into(),
+            "everywhere".into(),
+            "-D".into(),
+            display_name.into(),
+            "-L".into(),
+            "lanPrint".into(),
+        ];
+        if let Ok(output) = run_privileged("lpadmin", &args) {
+            if output.status.success() {
+                debug!("installed IPP queue {local_name}");
+                return Ok(());
+            }
+            warn!(
+                "IPP queue setup for {local_name} failed: {}",
+                String::from_utf8_lossy(&output.stderr).trim()
+            );
+        }
+    }
     let exe = std::env::current_exe().map_err(|e| AppError::Platform(e.to_string()))?;
     let backend = backend_dir().join("lanprint");
     if !backend.exists() {
@@ -478,6 +507,40 @@ pub fn remove_remote_printer(local_name: &str) -> Result<()> {
 
 pub fn launch_update(path: &Path) -> Result<()> {
     open::that(path).map_err(|e| AppError::Platform(format!("cannot open update: {e}")))
+}
+
+/// Point an existing CUPS queue at the local IPP endpoint so CUPS regenerates
+/// its PPD from the host printer's real capabilities.
+pub fn upgrade_ipp_queue(local_name: &str, id: u32) -> Result<()> {
+    if !crate::ipp::available() {
+        return Ok(());
+    }
+    let ipp_uri = crate::ipp::cups_uri(id);
+    let current = Command::new("lpstat")
+        .args(["-v", local_name])
+        .output()
+        .map_err(|e| AppError::Platform(format!("lpstat: {e}")))?;
+    let device = String::from_utf8_lossy(&current.stdout);
+    if device.contains(&format!(":{}", crate::ipp::IPP_PORT))
+        && device.contains(&format!("/ipp/{id}"))
+    {
+        return Ok(());
+    }
+    let args: Vec<String> = vec![
+        "-p".into(),
+        local_name.into(),
+        "-v".into(),
+        ipp_uri,
+        "-m".into(),
+        "everywhere".into(),
+    ];
+    let output = run_privileged("lpadmin", &args)?;
+    if !output.status.success() {
+        return Err(AppError::Platform(
+            String::from_utf8_lossy(&output.stderr).trim().to_string(),
+        ));
+    }
+    Ok(())
 }
 
 pub fn open_path(path: &Path) -> Result<()> {

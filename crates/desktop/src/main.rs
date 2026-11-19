@@ -9,6 +9,7 @@ mod cloud;
 mod cups;
 mod error;
 mod forwarder;
+mod ipp;
 mod platform;
 mod runtime;
 mod testpage;
