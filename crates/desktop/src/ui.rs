@@ -422,6 +422,15 @@ fn wire_callbacks(window: &MainWindow, tray: &TrayIcon, app: &Arc<App>) {
         }
     });
 
+    window.on_close_job_settings({
+        let weak = weak.clone();
+        move || {
+            if let Some(window) = weak.upgrade() {
+                window.set_job_open(false);
+            }
+        }
+    });
+
     window.on_save_job_settings({
         let app = app.clone();
         let weak = weak.clone();
@@ -630,6 +639,7 @@ fn wire_callbacks(window: &MainWindow, tray: &TrayIcon, app: &Arc<App>) {
                                 window.set_connect_open(false);
                                 window.set_selected_device(device.id.clone().into());
                                 refresh_ui(&window, &app_inner);
+                                window.invoke_list_all_printers(device.id.clone().into());
                             }
                             Err(err) => window.set_connect_error(error_text(&window, &err).into()),
                         }
