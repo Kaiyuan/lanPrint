@@ -112,6 +112,13 @@ export struct DiscoveryItem {
     requires-password: bool,
 }
 
+global Tips {
+    in-out property <bool> open: false;
+    in-out property <string> text: "";
+    in-out property <length> x: 0px;
+    in-out property <length> y: 0px;
+}
+
 export global L {
     in-out property <string> app-name: "lanPrint";
     in-out property <string> app-tagline: "Share any printer across Windows, macOS and Linux";
@@ -174,6 +181,18 @@ export global L {
     in-out property <string> language: "Language";
     in-out property <string> autostart: "Start with the system";
     in-out property <string> autostart-desc: "Run lanPrint in the tray when you sign in.";
+    in-out property <string> auto-update: "Automatic updates";
+    in-out property <string> auto-update-desc: "Check GitHub for a newer version at startup and every few hours.";
+    in-out property <string> update-available: "Update available";
+    in-out property <string> update-available-desc: "A newer version of lanPrint is available. Download and install it now?";
+    in-out property <string> update-install: "Download and install";
+    in-out property <string> update-later: "Later";
+    in-out property <string> update-downloading: "Downloading update…";
+    in-out property <string> update-download-failed: "Could not download the update";
+    in-out property <string> update-downloaded: "Update downloaded";
+    in-out property <string> check-now: "Check now";
+    in-out property <string> update-latest: "You are using the latest version";
+    in-out property <string> update-check-failed: "Could not check for updates";
     in-out property <string> host-sharing: "Host sharing";
     in-out property <string> host-password: "Host access code";
     in-out property <string> host-password-desc: "Clients need this code to view and use your shared printers. Change it to invalidate existing connections.";
@@ -717,6 +736,55 @@ component Select inherits Rectangle {
     }
 }
 
+component TipButton inherits Rectangle {
+    in property <image> icon;
+    in property <string> tip;
+    in property <bool> primary: false;
+    callback clicked();
+    width: 34px;
+    height: 32px;
+    horizontal-stretch: 0;
+    border-radius: 9px;
+    border-width: primary ? 0px : 1px;
+    border-color: Theme.border;
+    background: primary
+        ? (ta.pressed ? Theme.accent.transparentize(0.15) : Theme.accent)
+        : (ta.pressed ? Theme.control-pressed : (ta.has-hover ? Theme.control-hover : Theme.control));
+    Image {
+        source: root.icon;
+        width: 15px;
+        height: 15px;
+        x: (parent.width - 15px) / 2;
+        y: (parent.height - 15px) / 2;
+        colorize: root.primary ? Theme.on-accent : Theme.muted;
+    }
+    ta := TouchArea {
+        changed has-hover => {
+            if (self.has-hover) {
+                tip-timer.start();
+            } else {
+                tip-timer.stop();
+                Tips.open = false;
+            }
+        }
+        clicked => {
+            Tips.open = false;
+            root.clicked();
+        }
+    }
+    tip-timer := Timer {
+        interval: 3s;
+        running: false;
+        triggered => {
+            tip-timer.stop();
+            Tips.text = root.tip;
+            Tips.x = root.absolute-position.x + root.width / 2;
+            Tips.y = root.absolute-position.y + root.height + 6px;
+            Tips.open = true;
+        }
+    }
+}
+
 component NavItem inherits Rectangle {
     in property <string> label;
     in property <image> icon;
@@ -861,6 +929,12 @@ export component MainWindow inherits Window {
     in-out property <string> version-text: "";
     in-out property <bool> host-password-set: false;
     in-out property <bool> autostart: true;
+    in-out property <bool> auto-update: true;
+    in-out property <bool> update-available: false;
+    in-out property <string> update-version-text: "";
+    in-out property <bool> update-open: false;
+    in-out property <bool> update-busy: false;
+    in-out property <string> update-error: "";
     in-out property <string> host-password-input: "";
     in-out property <string> cloud-server: "";
     in-out property <string> cloud-code: "";
@@ -945,6 +1019,10 @@ export component MainWindow inherits Window {
     callback appearance-changed(int);
     callback accent-changed(int);
     callback set-autostart(bool);
+    callback set-auto-update(bool);
+    callback check-updates();
+    callback install-update();
+    callback close-update();
     callback set-host-password(string);
     callback share-printer(string, bool);
     callback printer-password(string, string);
@@ -1193,15 +1271,14 @@ export component MainWindow inherits Window {
                 if root.width > 600px : Text { text: "lanPrint"; color: Theme.text; font-size: 14px; font-weight: 600; vertical-alignment: center; }
                 Rectangle { horizontal-stretch: 1; }
                 if root.busy : Text { text: "…"; color: Theme.accent; font-size: 15px; vertical-alignment: center; }
-                TextButton { text: L.refresh; icon: @image-url("assets/icons/refresh.svg"); has-icon: true; clicked => { root.refresh(); } }
-                TextButton {
-                    text: L.connect-device;
+                TipButton { icon: @image-url("assets/icons/refresh.svg"); tip: L.refresh; clicked => { root.refresh(); } }
+                TipButton {
                     icon: @image-url("assets/icons/plus-circle.svg");
-                    has-icon: true;
+                    tip: L.connect-device;
                     primary: true;
                     clicked => { root.open-connect(); }
                 }
-                TextButton { text: L.settings; icon: @image-url("assets/icons/gear.svg"); has-icon: true; clicked => { root.open-settings(); } }
+                TipButton { icon: @image-url("assets/icons/gear.svg"); tip: L.settings; clicked => { root.open-settings(); } }
                 Rectangle { width: 6px; }
                 WindowButton {
                     icon: @image-url("assets/icons/win-minimize.svg");
@@ -1246,6 +1323,26 @@ export component MainWindow inherits Window {
             }
             Rectangle { horizontal-stretch: 1; }
             Text { text: "v" + root.version-text; color: Theme.tertiary; font-size: 9px; vertical-alignment: center; }
+            if root.update-available : Rectangle {
+                width: 15px;
+                height: 15px;
+                border-radius: 8px;
+                background: #F5B301;
+                Text {
+                    text: "!";
+                    color: #201A00;
+                    font-size: 11px;
+                    font-weight: 800;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                    width: parent.width;
+                    height: parent.height;
+                }
+                TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => { root.update-open = true; }
+                }
+            }
         }
     }
 
@@ -1451,7 +1548,10 @@ export component MainWindow inherits Window {
                     AppScrollView {
                         horizontal-stretch: 1;
                         VerticalLayout {
-                            padding: 20px;
+                            padding-left: 28px;
+                            padding-right: 28px;
+                            padding-top: 20px;
+                            padding-bottom: 20px;
                             spacing: 14px;
                             width: parent.width;
                             alignment: start;
@@ -1549,6 +1649,19 @@ export component MainWindow inherits Window {
                                         }
                                         Rectangle { horizontal-stretch: 1; }
                                         Switch { checked: root.autostart; toggled(v) => { root.autostart = v; root.set-autostart(v); } }
+                                    }
+                                }
+                                Card {
+                                    HorizontalLayout {
+                                        padding: 16px;
+                                        spacing: 12px;
+                                        VerticalLayout {
+                                            spacing: 3px;
+                                            Text { text: L.auto-update; color: Theme.text; font-size: 12px; font-weight: 500; }
+                                            MutedText { text: L.auto-update-desc; wrap: word-wrap; }
+                                        }
+                                        Rectangle { horizontal-stretch: 1; }
+                                        Switch { checked: root.auto-update; toggled(v) => { root.auto-update = v; root.set-auto-update(v); } }
                                     }
                                 }
                                 Card {
@@ -1771,6 +1884,7 @@ export component MainWindow inherits Window {
                                             spacing: 8px;
                                             TextButton { text: L.docs; small: true; clicked => { root.open-docs(); } }
                                             TextButton { text: L.open-logs; small: true; clicked => { root.open-logs(); } }
+                                            TextButton { text: L.check-now; small: true; clicked => { root.check-updates(); } }
                                             TextButton { text: L.quit; small: true; clicked => { root.quit-app(); } }
                                         }
                                     }
@@ -2076,6 +2190,52 @@ export component MainWindow inherits Window {
         }
     }
 
+    // ------------------------------------------------------- update prompt
+    if root.update-open : Rectangle {
+        width: parent.width;
+        height: parent.height;
+        background: Theme.overlay;
+        TouchArea { }
+        Rectangle {
+            width: 420px;
+            height: 250px;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            border-radius: 16px;
+            background: Theme.panel;
+            border-width: 1px;
+            border-color: Theme.border;
+            drop-shadow-blur: 30px;
+            drop-shadow-offset-y: 12px;
+            drop-shadow-color: Theme.shadow;
+            VerticalLayout {
+                padding: 22px;
+                spacing: 10px;
+                HorizontalLayout {
+                    Text { text: L.update-available; color: Theme.text; font-size: 16px; font-weight: 600; vertical-alignment: center; }
+                    Rectangle { horizontal-stretch: 1; }
+                    IconButton { text: "×"; clicked => { root.close-update(); } }
+                }
+                Text { text: root.update-version-text; color: Theme.accent; font-size: 12px; font-weight: 600; }
+                MutedText { text: L.update-available-desc; width: parent.width; wrap: word-wrap; }
+                if root.update-busy : Text { text: L.update-downloading; color: Theme.accent; font-size: 11px; }
+                if root.update-error != "" : Text { text: root.update-error; color: Theme.danger; font-size: 11px; wrap: word-wrap; }
+                Rectangle { vertical-stretch: 1; }
+                HorizontalLayout {
+                    spacing: 8px;
+                    Rectangle { horizontal-stretch: 1; }
+                    TextButton { text: L.update-later; clicked => { root.close-update(); } }
+                    TextButton {
+                        text: L.update-install;
+                        primary: true;
+                        enabled: !root.update-busy;
+                        clicked => { root.install-update(); }
+                    }
+                }
+            }
+        }
+    }
+
     // --------------------------------------------------------- first run sheet
     if root.first-run-open : Rectangle {
         width: parent.width;
@@ -2137,6 +2297,29 @@ export component MainWindow inherits Window {
         }
         TouchArea { clicked => { root.toast-close(); } }
     }
+
+    // ----------------------------------------------------------------- tip
+    if Tips.open : Rectangle {
+        x: Math.max(8px, Math.min(root.width - self.width - 8px, Tips.x - self.width / 2));
+        y: Tips.y;
+        width: tip-label.preferred-width + 18px;
+        height: 26px;
+        border-radius: 7px;
+        background: Theme.panel;
+        border-width: 1px;
+        border-color: Theme.border;
+        drop-shadow-blur: 12px;
+        drop-shadow-offset-y: 4px;
+        drop-shadow-color: Theme.shadow;
+        tip-label := Text {
+            x: 9px;
+            text: Tips.text;
+            color: Theme.text;
+            font-size: 11px;
+            vertical-alignment: center;
+            height: parent.height;
+        }
+    }
 }
 
 
@@ -2147,7 +2330,7 @@ export component TrayIcon inherits SystemTrayIcon {
     in property <string> quit-text: "Quit";
     icon: @image-url("assets/lanprint-icon.png");
     tooltip: "lanPrint";
-    title: "lanPrint";
+    title: "";
     callback open();
     callback quit();
     Menu {

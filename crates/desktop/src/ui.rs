@@ -118,6 +118,9 @@ pub fn run(
                 AppEvent::ShowWindow => {
                     let _ = window.show();
                 }
+                AppEvent::Quit => {
+                    std::process::exit(0);
+                }
             }
         }
     });
@@ -186,6 +189,7 @@ fn wire_callbacks(window: &MainWindow, tray: &TrayIcon, app: &Arc<App>) {
             let cfg = app.config.read();
             window.set_host_password_set(cfg.has_host_password());
             window.set_autostart(cfg.autostart);
+            window.set_auto_update(cfg.auto_update);
             window.set_cloud_enabled(cfg.cloud.enabled);
             window.set_cloud_server(cfg.cloud.server_url.clone().into());
             window.set_cloud_code(cfg.cloud.server_code.clone().into());
@@ -695,6 +699,95 @@ fn wire_callbacks(window: &MainWindow, tray: &TrayIcon, app: &Arc<App>) {
         }
     });
 
+    window.on_set_auto_update({
+        let app = app.clone();
+        let weak = weak.clone();
+        move |enabled| {
+            app.set_auto_update(enabled);
+            if let Some(window) = weak.upgrade() {
+                show_toast(&window, &translation(&app, "settings_saved"));
+            }
+        }
+    });
+
+    window.on_close_update({
+        let weak = weak.clone();
+        move || {
+            if let Some(window) = weak.upgrade() {
+                window.set_update_open(false);
+                window.set_update_error("".into());
+            }
+        }
+    });
+
+    window.on_check_updates({
+        let app = app.clone();
+        let weak = weak.clone();
+        move || {
+            let Some(window) = weak.upgrade() else { return };
+            window.set_update_busy(true);
+            window.set_update_error("".into());
+            let app_inner = app.clone();
+            let weak_inner = window.as_weak();
+            crate::runtime::spawn(async move {
+                let result = app_inner.check_updates(true).await;
+                let available = app_inner.available_update();
+                let _ = slint::invoke_from_event_loop(move || {
+                    if let Some(window) = weak_inner.upgrade() {
+                        window.set_update_busy(false);
+                        match result {
+                            Ok(()) => {
+                                if available.is_some() {
+                                    window.set_update_open(true);
+                                } else {
+                                    let l = window.global::<L>();
+                                    show_toast(&window, l.get_update_latest().as_str());
+                                }
+                            }
+                            Err(err) => {
+                                let l = window.global::<L>();
+                                show_toast(&window, l.get_update_check_failed().as_str());
+                                window.set_update_error(err.to_string().into());
+                            }
+                        }
+                    }
+                });
+            });
+        }
+    });
+
+    window.on_install_update({
+        let app = app.clone();
+        let weak = weak.clone();
+        move || {
+            let Some(window) = weak.upgrade() else { return };
+            window.set_update_busy(true);
+            window.set_update_error("".into());
+            let app_inner = app.clone();
+            let weak_inner = window.as_weak();
+            crate::runtime::spawn(async move {
+                let result = app_inner.install_update().await;
+                let _ = slint::invoke_from_event_loop(move || {
+                    if let Some(window) = weak_inner.upgrade() {
+                        window.set_update_busy(false);
+                        match result {
+                            Ok(()) => {
+                                let l = window.global::<L>();
+                                window.set_update_open(false);
+                                show_toast(&window, l.get_update_downloaded().as_str());
+                            }
+                            Err(err) => {
+                                let l = window.global::<L>();
+                                let message = format!("{}: {err}", l.get_update_download_failed());
+                                window.set_update_error(message.into());
+                            }
+                        }
+                    }
+                });
+            });
+        }
+    });
+
     window.on_appearance_changed({
         let app = app.clone();
         let weak = weak.clone();
@@ -1195,10 +1288,20 @@ fn refresh_ui(window: &MainWindow, app: &Arc<App>) {
     window.set_language_index(lang_index);
     window.set_host_password_set(cfg.has_host_password());
     window.set_autostart(cfg.autostart);
+    window.set_auto_update(cfg.auto_update);
     window.set_cloud_enabled(cfg.cloud.enabled);
     apply_theme(window, &cfg);
     window.set_share_code(cfg.cloud.share_code.clone().into());
     window.set_version_text(lanprint_core::VERSION.into());
+    if let Some(update) = app.available_update() {
+        window.set_update_available(true);
+        window.set_update_version_text(
+            format!("v{} → v{}", lanprint_core::VERSION, update.version).into(),
+        );
+    } else {
+        window.set_update_available(false);
+        window.set_update_version_text("".into());
+    }
     window.set_busy(snap.busy);
 
     let status = if !cfg.has_host_password() {
@@ -1460,6 +1563,18 @@ fn apply_language(window: &MainWindow, language: Language) {
         set_language = "language",
         set_autostart = "autostart",
         set_autostart_desc = "autostart_desc",
+        set_auto_update = "auto_update",
+        set_auto_update_desc = "auto_update_desc",
+        set_update_available = "update_available",
+        set_update_available_desc = "update_available_desc",
+        set_update_install = "update_install",
+        set_update_later = "update_later",
+        set_update_downloading = "update_downloading",
+        set_update_download_failed = "update_download_failed",
+        set_update_downloaded = "update_downloaded",
+        set_check_now = "check_now",
+        set_update_latest = "update_latest",
+        set_update_check_failed = "update_check_failed",
         set_host_sharing = "host_sharing",
         set_host_password = "host_password",
         set_host_password_desc = "host_password_desc",
