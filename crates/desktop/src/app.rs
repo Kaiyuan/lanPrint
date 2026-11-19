@@ -500,6 +500,45 @@ impl App {
             .unwrap()
             .remote_printers
             .insert(device_id.to_string(), printers);
+        #[cfg(windows)]
+        {
+            let mut pending = Vec::new();
+            {
+                let mut done = driver_sync_done().lock().unwrap();
+                let cfg = self.config.read();
+                let host_is_windows = cfg
+                    .remote_devices
+                    .iter()
+                    .find(|d| d.id == device_id)
+                    .map(|d| d.os.eq_ignore_ascii_case("windows"))
+                    .unwrap_or(false);
+                if host_is_windows {
+                    for cp in cfg
+                        .client_printers
+                        .iter()
+                        .filter(|cp| cp.device_id == device_id)
+                    {
+                        let driver = cp.capabilities.make_model.clone();
+                        if driver.is_empty() || !done.insert(cp.local_name.clone()) {
+                            continue;
+                        }
+                        pending.push((cp.local_name.clone(), driver, cp.preferences.clone()));
+                    }
+                }
+            }
+            for (local_name, driver, prefs) in pending {
+                let name = local_name.clone();
+                match tokio::task::spawn_blocking(move || {
+                    platform::sync_printer_driver(&name, &driver, &prefs)
+                })
+                .await
+                {
+                    Ok(Ok(())) => debug!("queue driver checked for {local_name}"),
+                    Ok(Err(err)) => debug!("could not switch {local_name} driver: {err}"),
+                    Err(err) => debug!("driver sync task failed for {local_name}: {err}"),
+                }
+            }
+        }
         self.emit(AppEvent::Refresh);
         Ok(())
     }
@@ -603,6 +642,14 @@ impl App {
         let prefs = shared.preferences.clone();
         let capabilities = shared.capabilities.clone();
         let supports_scan = shared.supports_scan;
+        // Native driver output (PCL/PostScript) is passed through to a Windows
+        // host unchanged. Other hosts print PDF through CUPS, so only reuse the
+        // host driver when the host itself runs Windows.
+        let queue_driver = if device.os.eq_ignore_ascii_case("windows") {
+            shared.driver.clone()
+        } else {
+            String::new()
+        };
         let tcp_port = 19_100u16.saturating_add(id as u16 % 800);
 
         let uri = if device.cloud {
@@ -647,7 +694,7 @@ impl App {
         if let Err(err) = platform::install_remote_printer(
             &local_name,
             &display,
-            &shared.driver,
+            &queue_driver,
             tcp_port,
             &uri,
             &prefs,
@@ -754,6 +801,9 @@ impl App {
         });
         if !found {
             return Err(AppError::Network("printer not found".into()));
+        }
+        if let Err(err) = platform::apply_printer_preferences(local_name, &prefs) {
+            warn!("could not update queue defaults for {local_name}: {err}");
         }
         self.emit(AppEvent::Refresh);
         Ok(())
@@ -1015,6 +1065,13 @@ pub fn device_link(device: &RemoteDevice) -> HostLink {
     } else {
         HostLink::lan(&device.address, device.port, false)
     }
+}
+
+#[cfg(windows)]
+fn driver_sync_done() -> &'static std::sync::Mutex<std::collections::HashSet<String>> {
+    static DONE: std::sync::OnceLock<std::sync::Mutex<std::collections::HashSet<String>>> =
+        std::sync::OnceLock::new();
+    DONE.get_or_init(|| std::sync::Mutex::new(std::collections::HashSet::new()))
 }
 
 fn unique_local_name(cfg: &AppConfig, device: &str, display: &str, id: u32) -> String {

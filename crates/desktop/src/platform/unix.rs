@@ -446,6 +446,26 @@ pub fn install_remote_printer(
     Ok(())
 }
 
+pub fn apply_printer_preferences(local_name: &str, prefs: &PrinterPreferences) -> Result<()> {
+    let sides = match prefs.duplex {
+        DuplexMode::LongEdge => "two-sided-long-edge",
+        DuplexMode::ShortEdge => "two-sided-short-edge",
+        DuplexMode::Simplex => "one-sided",
+    };
+    let mut args: Vec<String> = vec![
+        "-p".into(),
+        local_name.into(),
+        "-o".into(),
+        format!("sides={sides}"),
+    ];
+    if !prefs.paper.is_empty() {
+        args.push("-o".into());
+        args.push(format!("media={}", prefs.paper));
+    }
+    let refs: Vec<&str> = args.iter().map(String::as_str).collect();
+    run("lpoptions", &refs).map(|_| ())
+}
+
 pub fn remove_remote_printer(local_name: &str) -> Result<()> {
     let output = run_privileged("lpadmin", &["-x".into(), local_name.into()])?;
     if !output.status.success() {

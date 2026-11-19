@@ -320,6 +320,14 @@ pub fn print_document(
             Err(err) => warn!("PDF pipeline failed for {printer}: {err}; trying PrintTo"),
         }
     }
+    if lower.contains("postscript") || data.starts_with(b"%!PS") {
+        // A client queue that uses the host's PostScript driver spools raw
+        // PostScript. Send it straight to the printer before trying a handler.
+        match print_raw(printer, data) {
+            Ok(()) => return Ok(()),
+            Err(err) => warn!("raw PostScript failed for {printer}: {err}; trying PrintTo"),
+        }
+    }
     if lower.contains("pdf") || lower.contains("postscript") {
         // Fallback for machines without the Windows PDF engine (Windows 7) or
         // documents the engine rejects: use the installed PDF/PS handler.
@@ -408,8 +416,11 @@ fn print_raw(printer: &str, data: &[u8]) -> Result<()> {
 /// Install a local virtual queue backed by a TCP port that the desktop app
 /// listens on and forwards to the remote host.
 ///
-/// The queue uses the *Microsoft Print To PDF* driver when it is available so
-/// that the spooler renders every job to PDF instead of flattening it to text.
+/// When the host's driver is installed on this machine the queue uses it, so
+/// the Windows print dialog exposes the same duplex, colour, tray and finishing
+/// options as the host printer and the spooler emits native driver data. When
+/// the driver is missing the queue falls back to *Microsoft Print To PDF*, and
+/// the host renders the PDF with lanPrint's own pipeline.
 pub fn install_remote_printer(
     local_name: &str,
     display_name: &str,
@@ -426,6 +437,7 @@ $localName = '__LOCAL__'
 $driver = '__DRIVER__'
 $paper = '__PAPER__'
 $color = __COLOR__
+$duplex = '__DUPLEX__'
 try {
   Add-PrinterPort -Name $portName -PrinterHostAddress '127.0.0.1' -PortNumber $port -ErrorAction Stop
 } catch {
@@ -434,20 +446,28 @@ try {
 }
 $installed = @()
 try { $installed = @(Get-PrinterDriver | Select-Object -ExpandProperty Name) } catch {}
-$pdfDriver = 'Microsoft Print To PDF'
-$useDriver = 'Generic / Text Only'
-if ($installed -contains $pdfDriver) {
-  $useDriver = $pdfDriver
-} elseif ($driver -and ($installed -contains $driver)) {
-  $useDriver = $driver
+if ($driver -and -not ($installed -contains $driver)) {
+  try { Add-PrinterDriver -Name $driver -ErrorAction Stop; $installed += $driver } catch {}
 }
-try {
-  Add-Printer -Name $localName -DriverName $useDriver -PortName $portName -ErrorAction Stop
-} catch {
+try { Remove-Printer -Name $localName -ErrorAction SilentlyContinue } catch {}
+$candidates = @()
+if ($driver) { $candidates += $driver }
+$candidates += 'Microsoft Print To PDF'
+$candidates += 'Generic / Text Only'
+$added = $false
+foreach ($candidate in $candidates) {
+  if (-not ($installed -contains $candidate)) { continue }
+  try {
+    Add-Printer -Name $localName -DriverName $candidate -PortName $portName -ErrorAction Stop
+    $added = $true
+    break
+  } catch {}
+}
+if (-not $added) {
   rundll32 printui.dll,PrintUIEntry /if /b "$localName" /f "$env:WINDIR\inf\ntprint.inf" /r "$portName" /m "Generic / Text Only"
 }
 try {
-  Set-PrintConfiguration -PrinterName $localName -PaperSize $paper -Color:$color -ErrorAction Stop
+  Set-PrintConfiguration -PrinterName $localName -PaperSize $paper -Color:$color -Duplexing $duplex -ErrorAction Stop
 } catch {}
 "#
     .replace("__PORT_NAME__", &ps_quote(&port_name))
@@ -455,10 +475,78 @@ try {
     .replace("__LOCAL__", &ps_quote(local_name))
     .replace("__DRIVER__", &ps_quote(driver))
     .replace("__PAPER__", &ps_quote(&prefs.paper))
-    .replace("__COLOR__", if prefs.color { "$true" } else { "$false" });
+    .replace("__COLOR__", if prefs.color { "$true" } else { "$false" })
+    .replace("__DUPLEX__", duplex_setting(prefs));
     powershell(&script)?;
     debug!("installed Windows virtual printer {local_name} on {port_name} ({display_name})");
     Ok(())
+}
+
+fn duplex_setting(prefs: &PrinterPreferences) -> &'static str {
+    match prefs.duplex {
+        lanprint_core::DuplexMode::LongEdge => "TwoSidedLongEdge",
+        lanprint_core::DuplexMode::ShortEdge => "TwoSidedShortEdge",
+        lanprint_core::DuplexMode::Simplex => "OneSided",
+    }
+}
+
+/// Apply print settings to the local queue defaults so applications that use
+/// the Windows print dialog start from the values chosen in lanPrint.
+pub fn apply_printer_preferences(local_name: &str, prefs: &PrinterPreferences) -> Result<()> {
+    let mut args = vec![format!("-PrinterName '{}'", ps_quote(local_name))];
+    if !prefs.paper.is_empty() {
+        args.push(format!("-PaperSize '{}'", ps_quote(&prefs.paper)));
+    }
+    args.push(format!(
+        "-Color:{}",
+        if prefs.color { "$true" } else { "$false" }
+    ));
+    args.push(format!("-Duplexing {}", duplex_setting(prefs)));
+    let script = format!(
+        "$ErrorActionPreference='Stop'; Set-PrintConfiguration {} | Out-Null",
+        args.join(" ")
+    );
+    powershell(&script).map(|_| ())
+}
+
+/// Switch an existing queue to the host printer's driver when it is installed
+/// on this machine, so the Windows print dialog exposes the same features.
+pub fn sync_printer_driver(
+    local_name: &str,
+    driver: &str,
+    prefs: &PrinterPreferences,
+) -> Result<()> {
+    if driver.is_empty() {
+        return Ok(());
+    }
+    let paper = if prefs.paper.is_empty() {
+        String::new()
+    } else {
+        format!("-PaperSize '{}'", ps_quote(&prefs.paper))
+    };
+    let script = r#"
+$ErrorActionPreference = 'Stop'
+$name = '__NAME__'
+$driver = '__DRIVER__'
+try { $current = (Get-Printer -Name $name -ErrorAction Stop).DriverName } catch { exit 0 }
+if ($current -eq $driver) { exit 0 }
+$installed = @()
+try { $installed = @(Get-PrinterDriver | Select-Object -ExpandProperty Name) } catch {}
+if (-not ($installed -contains $driver)) {
+  try { Add-PrinterDriver -Name $driver -ErrorAction Stop; $installed += $driver } catch {}
+}
+if (-not ($installed -contains $driver)) { exit 0 }
+try { Set-Printer -Name $name -DriverName $driver -ErrorAction Stop } catch { exit 0 }
+try {
+  Set-PrintConfiguration -PrinterName $name __PAPER__ -Color:__COLOR__ -Duplexing __DUPLEX__ -ErrorAction Stop
+} catch {}
+"#
+    .replace("__NAME__", &ps_quote(local_name))
+    .replace("__DRIVER__", &ps_quote(driver))
+    .replace("__PAPER__", &paper)
+    .replace("__COLOR__", if prefs.color { "$true" } else { "$false" })
+    .replace("__DUPLEX__", duplex_setting(prefs));
+    powershell(&script).map(|_| ())
 }
 
 pub fn remove_remote_printer(local_name: &str) -> Result<()> {

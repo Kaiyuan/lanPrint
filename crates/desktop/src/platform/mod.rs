@@ -75,6 +75,30 @@ pub fn remove_remote_printer(local_name: &str) -> Result<()> {
     imp::remove_remote_printer(local_name)
 }
 
+/// Update the local queue defaults so the system print dialog starts from the
+/// same settings as the lanPrint dialog.
+pub fn apply_printer_preferences(local_name: &str, prefs: &PrinterPreferences) -> Result<()> {
+    imp::apply_printer_preferences(local_name, prefs)
+}
+
+/// Switch an existing Windows queue to the host printer's driver when that
+/// driver is available locally. No-op on other platforms.
+pub fn sync_printer_driver(
+    local_name: &str,
+    driver: &str,
+    prefs: &PrinterPreferences,
+) -> Result<()> {
+    #[cfg(windows)]
+    {
+        imp::sync_printer_driver(local_name, driver, prefs)
+    }
+    #[cfg(unix)]
+    {
+        let _ = (local_name, driver, prefs);
+        Ok(())
+    }
+}
+
 pub fn open_path(path: &Path) -> Result<()> {
     imp::open_path(path)
 }
