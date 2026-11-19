@@ -171,51 +171,6 @@ jobs:
           path: "*Windows7*.zip"
           if-no-files-found: ignore
 
-  linux-musl:
-    name: Desktop Linux static (${{ matrix.arch }})
-    runs-on: ${{ matrix.os }}
-    continue-on-error: true
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-24.04
-            target: x86_64-unknown-linux-musl
-            arch: x86_64
-          - os: ubuntu-24.04-arm
-            target: aarch64-unknown-linux-musl
-            arch: aarch64
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
-      - name: Install musl tools
-        run: sudo apt-get update && sudo apt-get install -y musl-tools libxkbcommon-dev libwayland-dev libx11-dev libfontconfig1-dev
-      - uses: Swatinem/rust-cache@v2
-        with:
-          key: ${{ matrix.target }}
-      - name: Build static desktop
-        run: cargo build --release --locked -p lanprint-desktop --target ${{ matrix.target }}
-      - name: Package
-        run: |
-          ver="${GITHUB_REF_NAME#v}"
-          dir="package/lanPrint_${ver}_Linux_${{ matrix.arch }}_musl"
-          mkdir -p "$dir"
-          cp "target/${{ matrix.target }}/release/lanPrint" "$dir/lanPrint"
-          chmod +x "$dir/lanPrint"
-          cp crates/desktop/ui/assets/lanprint-icon.png "$dir/lanprint.png"
-          cp packaging/linux/lanprint.desktop "$dir/lanprint.desktop"
-          cp packaging/linux/install-linux.sh "$dir/install.sh"
-          cp README.md README_EN.md LICENSE "$dir/"
-          tar -C package -czf "lanPrint_${ver}_Linux_${{ matrix.arch }}_musl.tar.gz" "lanPrint_${ver}_Linux_${{ matrix.arch }}_musl"
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: desktop-Linux_${{ matrix.arch }}_musl
-          path: "*_musl.tar.gz"
-          if-no-files-found: ignore
-
   bridge:
     name: Bridge ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
@@ -323,21 +278,33 @@ jobs:
 
   release:
     name: Publish GitHub release
-    needs: [desktop, windows7, linux-musl, bridge]
-    if: always() && needs.desktop.result == 'success' && needs.bridge.result == 'success'
+    needs: [desktop, windows7, bridge]
+    if: always() && !cancelled()
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           path: artifacts
           merge-multiple: true
+      - name: Check downloaded artifacts
+        id: check
+        run: |
+          if [ -d artifacts ] && [ -n "$(find artifacts -type f -print -quit)" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::No build artifacts were uploaded; the release step is skipped."
+          fi
       - name: Generate checksums
+        if: steps.check.outputs.found == 'true'
         run: |
           cd artifacts
           find . -type f -print0 | sort -z | xargs -0 sha256sum > ../checksums.txt
           cat ../checksums.txt
       - uses: softprops/action-gh-release@v2
+        if: steps.check.outputs.found == 'true'
         with:
           files: |
             artifacts/**/*
@@ -348,6 +315,9 @@ jobs:
 
             Cross-platform printer sharing with host/client modes, scanning,
             nine UI languages and optional cloud bridging.
+
+            Built from `${{ github.sha }}`. Platforms that failed in this run
+            are missing from the file list; the workflow run has the details.
 
             See the [documentation](https://kaiyuan.github.io/lanPrint/) for
             setup instructions and the bridge server deployment guide.

@@ -100,7 +100,7 @@ sudo ./install.sh
 
 脚本会安装主程序、桌面入口、图标和 CUPS Backend 软链接。UOS 20 / Deepin 20 的托盘通过 StatusNotifierItem 实现，无需 GTK AppIndicator 依赖。
 
-> UOS / Deepin 的系统 glibc 较旧。发布页同时提供 `Linux_*_musl` 静态构建（best-effort）；若标准包无法启动，请优先使用 musl 包，或在目标系统上从源码构建。
+> UOS / Deepin 的系统 glibc 较旧。若标准 Linux 包无法启动，请在目标系统上从源码构建（`cargo build --release -p lanprint-desktop`）。
 
 ## 🚀 使用
 
@@ -284,11 +284,11 @@ Slint 采用 GPL-3.0 / Royalty-free 2.0 多许可协议。本项目以 Slint Roy
 
 推送 `v*` 标签会触发 `.github/workflows/release.yml`：
 
-- 编译 Windows x86_64 / i686、Windows 7、macOS Intel / Apple Silicon、Linux x86_64 / aarch64，以及 best-effort 的静态 musl 版本；
+- 编译 Windows x86_64 / i686、Windows 7、macOS Intel / Apple Silicon、Linux x86_64 / aarch64；
 - 生成 Windows zip 与 Inno Setup 安装包、macOS `.app`、Linux tar.gz；
 - 编译桥接服务端并上传；
 - 若该服务端版本尚未发布，则构建并推送同一个镜像；
-- 创建 GitHub Release 并附加所有产物。
+- 创建 GitHub Release，并附上所有编译成功的产物（某个平台失败时其余产物仍会发布）。
 
 需要在仓库 Secrets 中配置：
 

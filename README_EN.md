@@ -94,7 +94,7 @@ sudo ./install.sh
 
 The installer adds the binary, desktop entry, icon and CUPS backend symlink. On UOS 20 / Deepin 20 the tray uses StatusNotifierItem over D-Bus, so no GTK AppIndicator dependency is required.
 
-> UOS / Deepin ship an older glibc. Releases also include best-effort `Linux_*_musl` static builds; use one of those if the standard binary does not start, or build from source on the target system.
+> UOS / Deepin ship an older glibc. If the standard Linux build does not start there, build from source on the target system with `cargo build --release -p lanprint-desktop`.
 
 ## Usage
 
@@ -276,11 +276,11 @@ Pushing to `main` runs `.github/workflows/ci.yml`. When the bridge version in `c
 
 Pushing a `v*` tag runs `.github/workflows/release.yml`:
 
-- builds Windows x86_64 / i686, Windows 7, macOS Intel / Apple Silicon, Linux x86_64 / aarch64 and best-effort static musl binaries;
+- builds Windows x86_64 / i686, Windows 7, macOS Intel / Apple Silicon and Linux x86_64 / aarch64;
 - creates Windows zip + Inno Setup installer, macOS `.app`, Linux tar.gz;
 - builds the bridge server;
 - builds and pushes the same image unless that server version is already published;
-- publishes a GitHub release with every artifact.
+- publishes a GitHub release with every artifact that built successfully, even when another platform failed.
 
 Repository secrets:
 
