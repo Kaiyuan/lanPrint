@@ -3,7 +3,7 @@
 #   iwr -useb https://raw.githubusercontent.com/Kaiyuan/lanPrint/main/scripts/install.ps1 | iex
 #
 # Environment:
-#   $env:LANPRINT_VERSION = "v2.0.0"  (default: latest)
+#   $env:LANPRINT_VERSION = "v2.0.1"  (default: latest)
 
 $ErrorActionPreference = "Stop"
 $repo = "Kaiyuan/lanPrint"
