@@ -34,7 +34,7 @@
       <a href="#host" data-i18n="toc_host">Share printers (host)</a>
       <a href="#client" data-i18n="toc_client">Add printers (client)</a>
       <a href="#scan" data-i18n="toc_scan">Scanning</a>
-      <a href="#prefs" data-i18n="toc_prefs">Printer preferences</a>
+      <a href="#prefs" data-i18n="toc_prefs">Print settings</a>
       <a href="#cloud" data-i18n="toc_cloud">Cloud sharing</a>
       <a href="#faq" data-i18n="toc_faq">Troubleshooting</a>
     </aside>
@@ -117,8 +117,20 @@ curl -fsSL https://raw.githubusercontent.com/Kaiyuan/lanPrint/main/scripts/insta
         <li data-i18n="scan_res">Choose 150/200/300/600 dpi, color or grayscale, flatbed or ADF. Files are saved to <code>Downloads/lanPrint-scans</code>.</li>
       </ul>
 
-      <h2 id="prefs" data-i18n="prefs_title">Printer preferences</h2>
-      <p data-i18n="prefs_desc">The host shares paper size, colour, duplex and resolution. The client applies those defaults to its local queue. The “Preferences” button on an added printer opens the operating system’s driver preferences dialog so you can adjust the final settings.</p>
+      <h2 id="prefs" data-i18n="prefs_title">Print settings</h2>
+      <p data-i18n="prefs_desc">The client renders every job to PDF and sends it to the host, which prints it with the real printer driver. lanPrint reads the host printer’s capabilities (paper sizes, trays, duplex, booklet, colour, copies) and shows them in the “Print settings” dialog of each added printer.</p>
+      <div class="steps">
+        <div class="step"><h3 data-i18n="prefs_step1">Open the dialog</h3><p data-i18n="prefs_step1_desc">Click the settings button on an added printer. Only options the host printer really supports are shown.</p></div>
+        <div class="step"><h3 data-i18n="prefs_step2">Pick the options</h3><p data-i18n="prefs_step2_desc">Two-sided printing (long or short edge), booklet, colour mode, paper size, input tray and copies. Booklet imposes two pages per side and needs duplex.</p></div>
+        <div class="step"><h3 data-i18n="prefs_step3">Save</h3><p data-i18n="prefs_step3_desc">The settings are stored on this client and sent with every job. The host clamps them to the printer’s real capabilities, so an unsupported value never reaches the driver.</p></div>
+      </div>
+      <figure class="shot">
+        <a href="images/guide/print-settings.png" target="_blank" rel="noopener">
+          <img src="images/guide/print-settings.png" alt="Print settings dialog with duplex, booklet, colour, paper, tray and copies" loading="lazy">
+        </a>
+        <figcaption data-i18n="shot_prefs">Print settings: duplex, booklet, colour, paper, tray and copies all come from the host printer.</figcaption>
+      </figure>
+      <div class="note" data-i18n="prefs_note">These settings apply to jobs from this client. Use the application’s own print dialog for page ranges; layout and paper handling here match the host printer.</div>
 
       <h2 id="cloud" data-i18n="cloud_title">Cloud sharing</h2>
       <p data-i18n="cloud_intro">Cloud sharing lets a client reach a host that is behind NAT or on a different network. All traffic goes through your own bridge server.</p>
