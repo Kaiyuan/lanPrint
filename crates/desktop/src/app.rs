@@ -7,8 +7,8 @@ use lanprint_core::auth::{
     HOST_TOKEN_TTL, PRINTER_TOKEN_TTL,
 };
 use lanprint_core::{
-    discovery, AppConfig, ClientPrinter, ConfigStore, DiscoveredDevice, InfoResponse, JobRecord,
-    LocalPrinter, PrinterPreferences, RemoteDevice, ScanRequest, SharedPrinter,
+    discovery, AppConfig, ClientPrinter, ConfigStore, DiscoveredDevice, DuplexMode, InfoResponse,
+    JobRecord, LocalPrinter, PrinterPreferences, RemoteDevice, ScanRequest, SharedPrinter,
     SharedPrinterConfig,
 };
 use mdns_sd::ServiceDaemon;
@@ -598,7 +598,7 @@ impl App {
             return Ok(existing.clone());
         }
         let id = cfg.client_printers.iter().map(|p| p.id).max().unwrap_or(0) + 1;
-        let local_name = unique_local_name(&cfg, &shared.display_name, id);
+        let local_name = unique_local_name(&cfg, &device.name, &shared.display_name, id);
         let display = shared.display_name.clone();
         let prefs = shared.preferences.clone();
         let capabilities = shared.capabilities.clone();
@@ -778,14 +778,20 @@ impl App {
             .ok_or_else(|| AppError::Network("device not found".into()))?;
         let link = device_link(&device);
         let data = platform::test_page(&device.name);
+        let mut prefs = cp.preferences.clone();
+        // The colour test page is a single sheet: always print it one-sided,
+        // without booklet imposition, and only once.
+        prefs.duplex = DuplexMode::Simplex;
+        prefs.booklet = false;
+        prefs.copies = 1;
         link.print(
             &self.http,
             &cp.token,
             &cp.remote_name,
             data,
-            "text/plain",
-            "lanprint-test.txt",
-            &cp.preferences,
+            "application/pdf",
+            "lanprint-test.pdf",
+            &prefs,
         )
         .await?;
         self.emit(AppEvent::Toast("test_print_sent".into()));
@@ -1011,18 +1017,28 @@ pub fn device_link(device: &RemoteDevice) -> HostLink {
     }
 }
 
-fn unique_local_name(cfg: &AppConfig, display: &str, id: u32) -> String {
-    let clean: String = display
-        .chars()
-        .map(|c| {
-            if c.is_alphanumeric() || c == '-' || c == '_' {
-                c
-            } else {
-                '-'
-            }
-        })
-        .collect();
-    let base = format!("lanPrint-{}", clean.trim_matches('-'));
+fn unique_local_name(cfg: &AppConfig, device: &str, display: &str, id: u32) -> String {
+    let clean_part = |value: &str| -> String {
+        let clean: String = value
+            .chars()
+            .map(|c| {
+                if c.is_alphanumeric() || c == '-' || c == '_' {
+                    c
+                } else {
+                    '-'
+                }
+            })
+            .collect();
+        clean.trim_matches('-').to_string()
+    };
+    let device = clean_part(device);
+    let display = clean_part(display);
+    let base = match (device.is_empty(), display.is_empty()) {
+        (false, false) => format!("{device}-{display}"),
+        (false, true) => device,
+        (true, false) => display,
+        (true, true) => format!("lanPrint-{id}"),
+    };
     let mut name = base.clone();
     let mut n = 1;
     while cfg.client_printers.iter().any(|p| p.local_name == name) {
@@ -1033,4 +1049,32 @@ fn unique_local_name(cfg: &AppConfig, display: &str, id: u32) -> String {
         name = format!("lanPrint-{id}");
     }
     name
+}
+
+#[cfg(test)]
+mod naming_tests {
+    use super::unique_local_name;
+    use lanprint_core::{AppConfig, ClientPrinter};
+
+    #[test]
+    fn queues_are_named_after_device_and_printer() {
+        let mut cfg = AppConfig::default();
+        let name = unique_local_name(&cfg, "Design-PC", "HP LaserJet Pro", 1);
+        assert_eq!(name, "Design-PC-HP-LaserJet-Pro");
+
+        let mut printer = ClientPrinter::default();
+        printer.local_name = name.clone();
+        cfg.client_printers.push(printer);
+        assert_eq!(
+            unique_local_name(&cfg, "Design-PC", "HP LaserJet Pro", 2),
+            "Design-PC-HP-LaserJet-Pro-2"
+        );
+    }
+
+    #[test]
+    fn falls_back_when_names_are_empty() {
+        let cfg = AppConfig::default();
+        assert_eq!(unique_local_name(&cfg, "", "", 7), "lanPrint-7");
+        assert_eq!(unique_local_name(&cfg, "Design-PC", "", 7), "Design-PC");
+    }
 }

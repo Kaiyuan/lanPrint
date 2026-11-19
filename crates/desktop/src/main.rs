@@ -10,6 +10,7 @@ mod error;
 mod forwarder;
 mod platform;
 mod runtime;
+mod testpage;
 mod ui;
 
 use std::io::{Read, Write};

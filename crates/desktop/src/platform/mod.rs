@@ -127,17 +127,9 @@ pub fn copy_text(text: &str) -> Result<()> {
     Ok(())
 }
 
-/// A helper used by both platforms to build a small test page. It is plain
-/// text so that even the "Generic / Text Only" fallback driver can print it.
+/// Build the colourful A4 test page used by the "Test print" action. It is a
+/// PDF so the normal print pipeline (host-side rasterising, colour, paper and
+/// duplex handling) is exercised end to end.
 pub fn test_page(device_name: &str) -> Vec<u8> {
-    format!(
-        "lanPrint test page\n\
-         ------------------------------\n\
-         Host: {device_name}\n\
-         If you can read this page, the shared printer is working.\n\
-         \n\
-         lanPrint - cross platform printer sharing\n\
-         https://github.com/Kaiyuan/lanPrint\n"
-    )
-    .into_bytes()
+    crate::testpage::pdf(device_name)
 }
