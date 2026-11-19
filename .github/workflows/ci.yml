@@ -61,17 +61,31 @@ jobs:
       - name: Smoke test image
         run: |
           set -e
-          docker run --rm lanprint-bridge:ci --version
+          version_output="$(docker run --rm lanprint-bridge:ci --version)"
+          echo "$version_output"
+          if [[ "$version_output" != *lanprint-bridge* ]]; then
+            echo "::error::unexpected --version output: $version_output"
+            exit 1
+          fi
           docker run -d --name lanprint-bridge-ci \
             -e LANPRINT_BRIDGE_AUTH_CODE=ci-test-code \
             -e LANPRINT_BRIDGE_DATA=/tmp/hosts.json \
             -p 52334:52334 \
             lanprint-bridge:ci
           trap 'docker rm -f lanprint-bridge-ci >/dev/null 2>&1 || true' EXIT
+          healthy=0
           for i in $(seq 1 30); do
-            if curl -fsS http://127.0.0.1:52334/health >/dev/null 2>&1; then break; fi
+            if curl -fsS http://127.0.0.1:52334/health >/dev/null 2>&1; then healthy=1; break; fi
+            if [ "$(docker inspect -f '{{.State.Running}}' lanprint-bridge-ci 2>/dev/null)" != "true" ]; then break; fi
             sleep 1
           done
+          if [ "$healthy" != "1" ]; then
+            echo "--- container state ---"
+            docker inspect -f 'status={{.State.Status}} exit={{.State.ExitCode}}' lanprint-bridge-ci || true
+            echo "--- container logs ---"
+            docker logs lanprint-bridge-ci || true
+            exit 1
+          fi
           curl -fsS http://127.0.0.1:52334/health
 
   bridge-version:

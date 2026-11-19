@@ -17,7 +17,10 @@ RUN mkdir -p crates/core/src crates/desktop/src crates/bridge/src \
 
 COPY crates ./crates
 COPY locales ./locales
-RUN cargo build --release -p lanprint-bridge --locked
+# The dependency-cache build compiled placeholder sources; drop those artifacts
+# so the real sources are always rebuilt (COPY keeps older mtimes).
+RUN cargo clean -p lanprint-bridge -p lanprint-core \
+    && cargo build --release -p lanprint-bridge --locked
 
 FROM debian:bookworm-slim
 # hadolint ignore=DL3008

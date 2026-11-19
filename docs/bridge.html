@@ -94,7 +94,7 @@ docker compose -f docker-compose.caddy.yml logs -f</code></pre>
       <p data-i18n="compose_version_desc">The image is tagged with the bridge version and <code>latest</code>. Pin a version in the compose file for reproducible deployments.</p>
       <pre><code>services:
   lanprint-bridge:
-    image: kaiyuan/lanprint-bridge:2.0.0</code></pre>
+    image: kaiyuan/lanprint-bridge:2.0.1</code></pre>
       <p data-i18n="compose_update_desc">To update, pull the new image and recreate the container. Share codes live in the named volume, so they survive upgrades; back up that volume with your usual Docker tooling before updating.</p>
       <pre><code>docker compose pull
 docker compose up -d
