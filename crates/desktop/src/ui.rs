@@ -10,6 +10,7 @@ use lanprint_core::{
 };
 use slint::{CloseRequestResponse, ComponentHandle, Model, ModelRc, Timer, TimerMode, VecModel};
 
+use crate::activity::ActivityKind;
 use crate::app::{App, AppEvent};
 use crate::autostart;
 use crate::error::AppError;
@@ -1145,6 +1146,48 @@ fn refresh_ui(window: &MainWindow, app: &Arc<App>) {
         .collect();
     window.set_local_printers(ModelRc::new(VecModel::from(locals)));
 
+    let l = window.global::<L>();
+    let activities: Vec<ActivityItem> = app
+        .activity()
+        .into_iter()
+        .map(|entry| {
+            let printed = entry.kind == ActivityKind::Print;
+            let device = if entry.device.trim().is_empty() {
+                l.get_activity_unknown_device().to_string()
+            } else {
+                entry.device.clone()
+            };
+            let detail = if printed {
+                if entry.filename.is_empty() {
+                    entry.printer.clone()
+                } else {
+                    format!("{} · {}", entry.printer, entry.filename)
+                }
+            } else {
+                entry.address.clone()
+            };
+            let status = if printed {
+                if entry.status == "failed" {
+                    l.get_activity_failed().to_string()
+                } else {
+                    l.get_activity_sent().to_string()
+                }
+            } else {
+                l.get_activity_connected().to_string()
+            };
+            ActivityItem {
+                when: activity_time(entry.time).into(),
+                kind: if printed { 1 } else { 0 },
+                device: device.into(),
+                channel: if entry.channel == "cloud" { 1 } else { 0 },
+                detail: detail.into(),
+                status: status.into(),
+                failed: entry.status == "failed",
+            }
+        })
+        .collect();
+    window.set_activities(ModelRc::new(VecModel::from(activities)));
+
     let lang_index = Language::ALL
         .iter()
         .position(|l| *l == cfg.language())
@@ -1196,6 +1239,15 @@ fn discovery_item(d: &DiscoveredDevice) -> DiscoveryItem {
         shared_count: d.shared_count as i32,
         requires_password: d.requires_password,
     }
+}
+
+fn activity_time(ts: i64) -> String {
+    use chrono::TimeZone;
+    chrono::Local
+        .timestamp_opt(ts, 0)
+        .single()
+        .map(|time| time.format("%Y-%m-%d %H:%M").to_string())
+        .unwrap_or_default()
 }
 
 fn preferences_text(
@@ -1436,6 +1488,16 @@ fn apply_language(window: &MainWindow, language: Language) {
         set_cloud_save = "cloud_save",
         set_cloud_hint = "cloud_hint",
         set_about = "about",
+        set_activity = "activity",
+        set_activity_desc = "activity_desc",
+        set_activity_empty = "activity_empty",
+        set_activity_connected = "activity_connected",
+        set_activity_printed = "activity_printed",
+        set_activity_lan = "activity_lan",
+        set_activity_cloud = "activity_cloud",
+        set_activity_sent = "activity_sent",
+        set_activity_failed = "activity_failed",
+        set_activity_unknown_device = "activity_unknown_device",
         set_version = "version",
         set_open_logs = "open_logs",
         set_quit = "quit",

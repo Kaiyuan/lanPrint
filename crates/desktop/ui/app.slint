@@ -81,6 +81,18 @@ export struct HostRow {
     preferences: string,
 }
 
+export struct ActivityItem {
+    when: string,
+    // 0 = connected, 1 = printed.
+    kind: int,
+    device: string,
+    // 0 = LAN, 1 = cloud.
+    channel: int,
+    detail: string,
+    status: string,
+    failed: bool,
+}
+
 export struct LocalPrinterItem {    name: string,
     driver: string,
     status: string,
@@ -190,6 +202,16 @@ export global L {
     in-out property <string> cloud-save: "Save and connect";
     in-out property <string> cloud-hint: "The bridge only relays traffic; printer access codes are still verified by this host.";
     in-out property <string> about: "About";
+    in-out property <string> activity: "Activity";
+    in-out property <string> activity-desc: "Connections to this host and the jobs other devices printed. LAN and cloud connections are marked separately.";
+    in-out property <string> activity-empty: "No connections or print jobs yet.";
+    in-out property <string> activity-connected: "Connected";
+    in-out property <string> activity-printed: "Printed";
+    in-out property <string> activity-lan: "LAN";
+    in-out property <string> activity-cloud: "Cloud";
+    in-out property <string> activity-sent: "Sent";
+    in-out property <string> activity-failed: "Failed";
+    in-out property <string> activity-unknown-device: "Unknown device";
     in-out property <string> version: "Version";
     in-out property <string> open-logs: "Open log folder";
     in-out property <string> quit: "Quit";
@@ -825,6 +847,7 @@ export component MainWindow inherits Window {
     in-out property <[PrinterItem]> printers: [];
     in-out property <[HostRow]> rows: [];
     in-out property <[LocalPrinterItem]> local-printers: [];
+    in-out property <[ActivityItem]> activities: [];
     in-out property <[DiscoveryItem]> discoveries: [];
     in-out property <[string]> language-names: ["简体中文", "繁體中文", "English", "Français", "Deutsch", "Italiano", "Español", "日本語", "한국어"];
     in-out property <int> language-index: 0;
@@ -1419,7 +1442,8 @@ export component MainWindow inherits Window {
                             NavItem { label: L.general; icon: @image-url("assets/icons/sliders.svg"); selected: root.settings-tab == 0; clicked => { root.settings-tab = 0; } }
                             NavItem { label: L.share-printers; icon: @image-url("assets/icons/printer.svg"); selected: root.settings-tab == 1; clicked => { root.settings-tab = 1; } }
                             NavItem { label: L.cloud-title; icon: @image-url("assets/icons/cloud.svg"); selected: root.settings-tab == 2; clicked => { root.settings-tab = 2; } }
-                            NavItem { label: L.about; icon: @image-url("assets/icons/info.svg"); selected: root.settings-tab == 3; clicked => { root.settings-tab = 3; } }
+                            NavItem { label: L.activity; icon: @image-url("assets/icons/list.svg"); selected: root.settings-tab == 3; clicked => { root.settings-tab = 3; } }
+                            NavItem { label: L.about; icon: @image-url("assets/icons/info.svg"); selected: root.settings-tab == 4; clicked => { root.settings-tab = 4; } }
                             Rectangle { vertical-stretch: 1; }
                             MutedText { text: "lanPrint " + root.version-text; }
                         }
@@ -1639,6 +1663,91 @@ export component MainWindow inherits Window {
                             }
 
                             if root.settings-tab == 3 : VerticalLayout {
+                                spacing: 12px;
+                                HorizontalLayout {
+                                    spacing: 8px;
+                                    SectionTitle { text: L.activity; }
+                                    Rectangle { horizontal-stretch: 1; }
+                                    Badge { text: root.activities.length + ""; tone: Theme.segment-bg; foreground: Theme.muted; }
+                                }
+                                MutedText { text: L.activity-desc; width: parent.width; wrap: word-wrap; }
+                                if root.activities.length == 0 : Card {
+                                    height: 96px;
+                                    Text {
+                                        text: L.activity-empty;
+                                        color: Theme.tertiary;
+                                        font-size: 12px;
+                                        horizontal-alignment: center;
+                                        vertical-alignment: center;
+                                    }
+                                }
+                                for entry in root.activities : Card {
+                                    height: 64px;
+                                    HorizontalLayout {
+                                        padding-left: 14px;
+                                        padding-right: 14px;
+                                        spacing: 10px;
+                                        cross-axis-alignment: center;
+                                        Rectangle {
+                                            width: 32px;
+                                            height: 32px;
+                                            border-radius: 8px;
+                                            background: Theme.control;
+                                            Image {
+                                                width: 18px;
+                                                height: 18px;
+                                                x: 7px;
+                                                y: 7px;
+                                                source: entry.kind == 0 ? @image-url("assets/icons/plug.svg") : @image-url("assets/icons/printer.svg");
+                                                colorize: entry.kind == 0 ? Theme.accent : Theme.success;
+                                            }
+                                        }
+                                        VerticalLayout {
+                                            spacing: 2px;
+                                            HorizontalLayout {
+                                                spacing: 6px;
+                                                Text {
+                                                    text: entry.device;
+                                                    color: Theme.text;
+                                                    font-size: 12px;
+                                                    font-weight: 600;
+                                                    overflow: elide;
+                                                }
+                                                Badge {
+                                                    text: entry.channel == 1 ? L.activity-cloud : L.activity-lan;
+                                                    tone: entry.channel == 1 ? Theme.accent-soft : Theme.segment-bg;
+                                                    foreground: entry.channel == 1 ? Theme.accent : Theme.muted;
+                                                }
+                                            }
+                                            Text {
+                                                text: entry.detail;
+                                                color: Theme.muted;
+                                                font-size: 10.5px;
+                                                overflow: elide;
+                                            }
+                                        }
+                                        Rectangle { horizontal-stretch: 1; }
+                                        VerticalLayout {
+                                            spacing: 2px;
+                                            alignment: center;
+                                            Text {
+                                                text: entry.when;
+                                                color: Theme.muted;
+                                                font-size: 10.5px;
+                                                horizontal-alignment: right;
+                                            }
+                                            Text {
+                                                text: entry.status;
+                                                color: entry.failed ? Theme.danger : Theme.success;
+                                                font-size: 10.5px;
+                                                horizontal-alignment: right;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            if root.settings-tab == 4 : VerticalLayout {
                                 spacing: 16px;
                                 Card {
                                     VerticalLayout {
