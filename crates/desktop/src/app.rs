@@ -110,6 +110,38 @@ impl App {
             .cloned()
     }
 
+    /// Ensure existing client queues use the IPP endpoint. Runs silently on
+    /// Windows; on macOS/Linux it may request administrator rights, so the UI
+    /// calls it only after an explicit user action.
+    pub async fn upgrade_client_queues(self: &Arc<Self>, force: bool) {
+        if !force && !cfg!(windows) && std::env::args().any(|arg| arg == "--tray") {
+            return;
+        }
+        let printers = self.config.read().client_printers.clone();
+        for printer in printers {
+            if upgraded_queues()
+                .lock()
+                .map(|done| done.contains(&printer.id))
+                .unwrap_or(false)
+            {
+                continue;
+            }
+            let name = printer.local_name.clone();
+            let id = printer.id;
+            match tokio::task::spawn_blocking(move || platform::upgrade_ipp_queue(&name, id)).await
+            {
+                Ok(Ok(())) => {
+                    if let Ok(mut done) = upgraded_queues().lock() {
+                        done.insert(id);
+                    }
+                    debug!("queue {} uses IPP", printer.local_name);
+                }
+                Ok(Err(err)) => debug!("IPP upgrade for {} failed: {err}", printer.local_name),
+                Err(err) => debug!("IPP upgrade task for {} failed: {err}", printer.local_name),
+            }
+        }
+    }
+
     pub fn set_auto_update(self: &Arc<Self>, enabled: bool) {
         self.config.edit(|cfg| cfg.auto_update = enabled);
         if enabled {
@@ -274,12 +306,7 @@ impl App {
             let upgrader = self.clone();
             tokio::spawn(async move {
                 tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-                let printers = upgrader.config.read().client_printers.clone();
-                for printer in printers {
-                    if let Err(err) = platform::upgrade_ipp_queue(&printer.local_name, printer.id) {
-                        debug!("IPP upgrade for {} failed: {err}", printer.local_name);
-                    }
-                }
+                upgrader.upgrade_client_queues(false).await;
             });
         }
 
@@ -1323,6 +1350,12 @@ fn update_asset(version: &str, assets: &[(String, String)]) -> Option<(String, S
     {
         None
     }
+}
+
+fn upgraded_queues() -> &'static std::sync::Mutex<std::collections::HashSet<u32>> {
+    static DONE: std::sync::OnceLock<std::sync::Mutex<std::collections::HashSet<u32>>> =
+        std::sync::OnceLock::new();
+    DONE.get_or_init(|| std::sync::Mutex::new(std::collections::HashSet::new()))
 }
 
 fn unique_local_name(cfg: &AppConfig, device: &str, display: &str, id: u32) -> String {

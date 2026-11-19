@@ -113,9 +113,11 @@ $p | Select-Object Name,DriverName,PortName,Default,WorkOffline,PrinterStatus,Co
         } else {
             "A4"
         };
+        let duplex = driver.duplex.unwrap_or(false) || p.duplex.unwrap_or(false);
+        let color = driver.color.unwrap_or(false) || p.color.unwrap_or(false);
         let mut caps = PrinterCapabilities {
-            color: driver.color.unwrap_or(p.color.unwrap_or(false)),
-            duplex: driver.duplex.unwrap_or(p.duplex.unwrap_or(false)),
+            color,
+            duplex,
             max_paper: max_paper.into(),
             make_model: p.driver_name.clone(),
             supports_scan: false,
@@ -132,12 +134,12 @@ $p | Select-Object Name,DriverName,PortName,Default,WorkOffline,PrinterStatus,Co
             options: Vec::new(),
             papers: driver.papers.clone(),
             sources: driver.sources.clone(),
-            duplex_modes: if driver.duplex.unwrap_or(p.duplex.unwrap_or(false)) {
+            duplex_modes: if duplex {
                 vec!["long_edge".into(), "short_edge".into()]
             } else {
                 Vec::new()
             },
-            booklet: driver.duplex.unwrap_or(p.duplex.unwrap_or(false)),
+            booklet: duplex,
             max_copies: driver.max_copies,
         };
         if let Some(scanner) = match_scanner(&p.name, &scanners) {
@@ -462,8 +464,11 @@ if ($ippReady -and ($installed -contains $ippDriver)) {
     $added = $true
   } catch {}
   if (-not $added) {
-    rundll32 printui.dll,PrintUIEntry /if /b "$localName" /f "$env:WINDIR\inf\ntprint.inf" /r "$ippUrl" /m "$ippDriver"
-    if (Get-Printer -Name $localName -ErrorAction SilentlyContinue) { $added = $true }
+    rundll32 printui.dll,PrintUIEntry /if /q /b "$localName" /f "$env:WINDIR\inf\ntprint.inf" /r "$ippUrl" /m "$ippDriver"
+    for ($i = 0; $i -lt 20; $i++) {
+      if (Get-Printer -Name $localName -ErrorAction SilentlyContinue) { $added = $true; break }
+      Start-Sleep -Milliseconds 500
+    }
   }
 }
 if (-not $added) {
@@ -490,6 +495,7 @@ if (-not $added) {
 try {
   Set-PrintConfiguration -PrinterName $localName -PaperSize $paper -Color:$color -Duplexing $duplex -ErrorAction Stop
 } catch {}
+try { (Get-Printer -Name $localName -ErrorAction Stop).DriverName } catch { '' }
 "#
     .replace("__PORT_NAME__", &ps_quote(&port_name))
     .replace("__PORT__", &tcp_port.to_string())
@@ -507,8 +513,13 @@ try {
             "$false"
         },
     );
-    powershell(&script)?;
-    debug!("installed Windows virtual printer {local_name} on {port_name} ({display_name})");
+    let output = powershell(&script)?;
+    let chosen = output.lines().last().unwrap_or_default().trim();
+    if chosen.contains("IPP Class Driver") {
+        debug!("installed Windows IPP queue {local_name} ({display_name})");
+    } else {
+        warn!("installed Windows queue {local_name} with basic driver {chosen:?}");
+    }
     Ok(())
 }
 
@@ -590,4 +601,28 @@ pub fn log_dir() -> PathBuf {
         .unwrap_or_else(|| PathBuf::from("."))
         .join("lanPrint")
         .join("logs")
+}
+
+#[cfg(test)]
+mod cap_tests {
+    #[test]
+    fn dump_local_capabilities() {
+        if std::env::var("LANPRINT_DUMP_CAPS").is_err() {
+            return;
+        }
+        for printer in super::list_printers().expect("list printers") {
+            eprintln!(
+                "{} | driver={} | color={} duplex={} papers={:?} sources={:?} modes={:?} copies={} resolutions={:?}",
+                printer.name,
+                printer.driver,
+                printer.capabilities.color,
+                printer.capabilities.duplex,
+                printer.capabilities.papers,
+                printer.capabilities.sources,
+                printer.capabilities.duplex_modes,
+                printer.capabilities.max_copies,
+                printer.capabilities.resolutions
+            );
+        }
+    }
 }

@@ -197,6 +197,10 @@ fn wire_callbacks(window: &MainWindow, tray: &TrayIcon, app: &Arc<App>) {
             apply_theme(&window, &cfg);
             window.set_settings_open(true);
             window.set_settings_tab(0);
+            let upgrader = app.clone();
+            crate::runtime::spawn(async move {
+                upgrader.upgrade_client_queues(true).await;
+            });
         }
     });
 
