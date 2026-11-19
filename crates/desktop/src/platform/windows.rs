@@ -557,6 +557,30 @@ pub fn launch_update(path: &Path) -> Result<()> {
     Ok(())
 }
 
+/// Move an existing queue to the local IPP endpoint so the Windows print
+/// dialog adopts the host printer's real options.
+pub fn upgrade_ipp_queue(local_name: &str, id: u32) -> Result<()> {
+    if !crate::ipp::available() {
+        return Ok(());
+    }
+    let ipp_url = crate::ipp::http_uri(id);
+    let script = r#"
+$ErrorActionPreference = 'Stop'
+$name = '__NAME__'
+$ippUrl = '__IPP__'
+try { $printer = Get-Printer -Name $name -ErrorAction Stop } catch { exit 0 }
+if ($printer.PortName -like '*52336*') { exit 0 }
+$installed = @()
+try { $installed = @(Get-PrinterDriver | Select-Object -ExpandProperty Name) } catch {}
+if (-not ($installed -contains 'Microsoft IPP Class Driver')) { exit 0 }
+try { Add-PrinterPort -Name $ippUrl -ErrorAction SilentlyContinue | Out-Null } catch {}
+try { Set-Printer -Name $name -DriverName 'Microsoft IPP Class Driver' -PortName $ippUrl -ErrorAction Stop } catch { exit 0 }
+"#
+    .replace("__NAME__", &ps_quote(local_name))
+    .replace("__IPP__", &ps_quote(&ipp_url));
+    powershell(&script).map(|_| ())
+}
+
 pub fn open_path(path: &Path) -> Result<()> {
     open::that(path).map_err(|e| AppError::Platform(format!("cannot open {}: {e}", path.display())))
 }

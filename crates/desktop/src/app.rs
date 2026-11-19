@@ -270,7 +270,6 @@ impl App {
             }
         });
 
-        #[cfg(unix)]
         if !std::env::args().any(|arg| arg == "--tray") {
             let upgrader = self.clone();
             tokio::spawn(async move {

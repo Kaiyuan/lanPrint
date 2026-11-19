@@ -81,8 +81,7 @@ pub fn launch_update(path: &Path) -> Result<()> {
     imp::launch_update(path)
 }
 
-/// Move an existing client queue to the local IPP endpoint (macOS/Linux).
-#[allow(dead_code)]
+/// Move an existing client queue to the local IPP endpoint.
 pub fn upgrade_ipp_queue(local_name: &str, id: u32) -> Result<()> {
     #[cfg(unix)]
     {
@@ -90,8 +89,7 @@ pub fn upgrade_ipp_queue(local_name: &str, id: u32) -> Result<()> {
     }
     #[cfg(windows)]
     {
-        let _ = (local_name, id);
-        Ok(())
+        imp::upgrade_ipp_queue(local_name, id)
     }
 }
 
