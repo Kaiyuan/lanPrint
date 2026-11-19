@@ -6,7 +6,8 @@
 
 **打印**
 - 客户端任务改用 PDF 管线；Windows 主机通过 WinRT 渲染 PDF，并用真实打印机驱动输出，支持双面、小册子、纸张、进纸盒、彩色、份数和分辨率。
-- 客户端队列优先使用主机同款驱动，Windows 系统打印对话框会显示真实的双面、彩色、纸盒和装订选项；已连接队列会自动切换，缺少驱动时回退 PDF 队列。
+- 客户端队列优先使用 IPP Everywhere：macOS/Linux 创建驱动无关队列，Windows 使用 Microsoft IPP 类驱动，系统打印对话框会显示真实的双面、彩色、纸盒和装订选项；IPP 不可用时回退 PDF 队列。
+- 已连接的 macOS/Linux 队列会在下次手动启动时自动切换到 IPP 端点，以刷新系统打印能力。
 - 新增每台打印机的“打印设置”对话框，主机按打印机真实能力裁剪任务参数。
 - 本地打印队列按“设备名-打印机名”命名。
 - 测试打印改为彩色 A4 项目介绍页，单面单份，用于检查彩色和套准。
@@ -28,7 +29,8 @@
 
 **Printing**
 - Client jobs now use a PDF pipeline; Windows hosts render PDFs through WinRT and print with the real driver, including duplex, booklet, paper, trays, colour, copies and resolution.
-- Client queues reuse the host printer's driver when it is installed, so the Windows print dialog exposes the real duplex, colour, tray and finishing options. Existing queues are switched automatically; a PDF queue remains the fallback.
+- Client queues prefer IPP Everywhere: macOS/Linux get a driverless queue and Windows uses the Microsoft IPP Class Driver, so the system print dialog exposes the real duplex, colour, tray and finishing options. A PDF queue is the fallback.
+- Existing macOS/Linux queues switch to the IPP endpoint on the next manual launch, refreshing their system capabilities.
 - Added per-printer print settings; the host clamps each job to the printer's actual capabilities.
 - Local queues are named after the device and printer.
 - Test print now sends a colour A4 project page, one-sided and single copy.
