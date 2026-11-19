@@ -26,6 +26,8 @@ pub struct AppConfig {
     /// Accent theme: `blue`, `purple`, `pink`, `red`, `orange`, `green` or `graphite`.
     pub accent: String,
     pub autostart: bool,
+    /// Check GitHub releases for a newer version in the background.
+    pub auto_update: bool,
     pub api_port: u16,
     /// Argon2 hash of the host (connection) access code.
     pub host_password_hash: String,
@@ -56,6 +58,7 @@ impl Default for AppConfig {
             appearance: "system".into(),
             accent: "blue".into(),
             autostart: true,
+            auto_update: true,
             api_port: crate::DEFAULT_API_PORT,
             host_password_hash: String::new(),
             host_secret: secret,

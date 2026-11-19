@@ -476,6 +476,10 @@ pub fn remove_remote_printer(local_name: &str) -> Result<()> {
     Ok(())
 }
 
+pub fn launch_update(path: &Path) -> Result<()> {
+    open::that(path).map_err(|e| AppError::Platform(format!("cannot open update: {e}")))
+}
+
 pub fn open_path(path: &Path) -> Result<()> {
     let cmd = if cfg!(target_os = "macos") {
         "open"

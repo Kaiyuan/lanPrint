@@ -25,6 +25,14 @@ pub enum AppEvent {
     Refresh,
     Toast(String),
     ShowWindow,
+    Quit,
+}
+
+#[derive(Debug, Clone)]
+pub struct AvailableUpdate {
+    pub version: String,
+    pub page_url: String,
+    pub assets: Vec<(String, String)>,
 }
 
 #[derive(Default)]
@@ -46,6 +54,7 @@ pub struct App {
     cloud_task: Mutex<Option<tokio::task::JoinHandle<()>>>,
     relay_tx: Mutex<Option<tokio::sync::mpsc::UnboundedSender<lanprint_core::RelayFrame>>>,
     activity: crate::activity::ActivityLog,
+    update: std::sync::Mutex<Option<AvailableUpdate>>,
 }
 
 impl App {
@@ -62,6 +71,7 @@ impl App {
         }
         Ok(Arc::new(Self {
             activity: crate::activity::ActivityLog::load(&config.config_dir()),
+            update: std::sync::Mutex::new(None),
             config,
             http,
             state: RwLock::new(Runtime::default()),
@@ -84,6 +94,134 @@ impl App {
     pub fn record_activity(&self, entry: crate::activity::ActivityEntry) {
         self.activity.record(entry);
         self.emit(AppEvent::Refresh);
+    }
+
+    pub fn available_update(&self) -> Option<AvailableUpdate> {
+        self.update.lock().ok().and_then(|update| update.clone())
+    }
+
+    pub fn set_auto_update(self: &Arc<Self>, enabled: bool) {
+        self.config.edit(|cfg| cfg.auto_update = enabled);
+        if enabled {
+            let app = self.clone();
+            crate::runtime::spawn(async move {
+                if let Err(err) = app.check_updates(false).await {
+                    debug!("update check failed: {err}");
+                }
+            });
+        }
+    }
+
+    /// Ask GitHub for the latest release. `force` bypasses the automatic
+    /// update preference (used by the manual check button).
+    pub async fn check_updates(self: &Arc<Self>, force: bool) -> Result<()> {
+        if !force && !self.config.read().auto_update {
+            return Ok(());
+        }
+        let response = self
+            .http
+            .get("https://api.github.com/repos/Kaiyuan/lanPrint/releases/latest")
+            .header(reqwest::header::ACCEPT, "application/vnd.github+json")
+            .send()
+            .await
+            .map_err(|e| AppError::Network(format!("update check: {e}")))?;
+        if !response.status().is_success() {
+            return Err(AppError::Network(format!(
+                "update check returned {}",
+                response.status()
+            )));
+        }
+        let value: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| AppError::Network(format!("update response: {e}")))?;
+        let version = value
+            .get("tag_name")
+            .and_then(|tag| tag.as_str())
+            .unwrap_or_default()
+            .trim_start_matches('v')
+            .trim()
+            .to_string();
+        let page_url = value
+            .get("html_url")
+            .and_then(|url| url.as_str())
+            .unwrap_or("https://github.com/Kaiyuan/lanPrint/releases")
+            .to_string();
+        let assets: Vec<(String, String)> = value
+            .get("assets")
+            .and_then(|assets| assets.as_array())
+            .map(|assets| {
+                assets
+                    .iter()
+                    .filter_map(|asset| {
+                        let name = asset.get("name")?.as_str()?.to_string();
+                        let url = asset.get("browser_download_url")?.as_str()?.to_string();
+                        Some((name, url))
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+        let available = if version_is_newer(&version, lanprint_core::VERSION) {
+            Some(AvailableUpdate {
+                version,
+                page_url,
+                assets,
+            })
+        } else {
+            None
+        };
+        if let Ok(mut update) = self.update.lock() {
+            *update = available;
+        }
+        self.emit(AppEvent::Refresh);
+        Ok(())
+    }
+
+    /// Download the release asset and hand it to the platform installer.
+    pub async fn install_update(self: &Arc<Self>) -> Result<()> {
+        let update = self
+            .available_update()
+            .ok_or_else(|| AppError::Network("no update available".into()))?;
+        let Some((name, url)) = update_asset(&update.version, &update.assets) else {
+            // Fall back to the release page when no asset matches this build.
+            open::that(&update.page_url)
+                .map_err(|e| AppError::Platform(format!("cannot open release page: {e}")))?;
+            return Ok(());
+        };
+        let dir = std::env::temp_dir().join("lanPrint-updates");
+        std::fs::create_dir_all(&dir)
+            .map_err(|e| AppError::Platform(format!("update folder: {e}")))?;
+        let path = dir.join(&name);
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(900))
+            .build()
+            .map_err(AppError::from)?;
+        let response = client
+            .get(&url)
+            .send()
+            .await
+            .map_err(|e| AppError::Network(format!("download update: {e}")))?;
+        if !response.status().is_success() {
+            return Err(AppError::Network(format!(
+                "download update returned {}",
+                response.status()
+            )));
+        }
+        let data = response
+            .bytes()
+            .await
+            .map_err(|e| AppError::Network(format!("download update: {e}")))?;
+        std::fs::write(&path, &data)
+            .map_err(|e| AppError::Platform(format!("save update: {e}")))?;
+        platform::launch_update(&path)?;
+        #[cfg(windows)]
+        {
+            // The Inno Setup installer closes the running app before replacing
+            // files; give it a moment to start and then exit cleanly.
+            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+            self.emit(AppEvent::Quit);
+        }
+        Ok(())
     }
 
     pub fn snapshot(&self) -> RuntimeSnapshot {
@@ -114,6 +252,19 @@ impl App {
             let _ = self.refresh_device(&device.id).await;
         }
         self.start_cloud_host().await;
+
+        let updater = self.clone();
+        tokio::spawn(async move {
+            tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+            loop {
+                if updater.config.read().auto_update {
+                    if let Err(err) = updater.check_updates(false).await {
+                        debug!("update check failed: {err}");
+                    }
+                }
+                tokio::time::sleep(std::time::Duration::from_secs(6 * 3600)).await;
+            }
+        });
 
         let app = self.clone();
         tokio::spawn(async move {
@@ -1107,6 +1258,79 @@ pub fn device_link(device: &RemoteDevice) -> HostLink {
     }
 }
 
+fn version_parts(version: &str) -> Vec<u64> {
+    version
+        .trim_start_matches('v')
+        .split('.')
+        .map(|part| {
+            part.chars()
+                .take_while(|ch| ch.is_ascii_digit())
+                .collect::<String>()
+                .parse()
+                .unwrap_or(0)
+        })
+        .collect()
+}
+
+fn version_is_newer(latest: &str, current: &str) -> bool {
+    let latest = version_parts(latest);
+    let current = version_parts(current);
+    for index in 0..latest.len().max(current.len()) {
+        let left = latest.get(index).copied().unwrap_or(0);
+        let right = current.get(index).copied().unwrap_or(0);
+        if left != right {
+            return left > right;
+        }
+    }
+    false
+}
+
+fn update_asset(version: &str, assets: &[(String, String)]) -> Option<(String, String)> {
+    #[cfg(windows)]
+    let mut fallback: Option<(String, String)> = None;
+    for (name, url) in assets {
+        #[cfg(windows)]
+        {
+            if name.ends_with("-setup.exe") {
+                if name == &format!("lanPrint-{version}-setup.exe") {
+                    return Some((name.clone(), url.clone()));
+                }
+                fallback.get_or_insert_with(|| (name.clone(), url.clone()));
+            }
+        }
+        #[cfg(target_os = "macos")]
+        {
+            let arch = if cfg!(target_arch = "aarch64") {
+                "Mac_aarch64"
+            } else {
+                "Mac_x86_64"
+            };
+            if name.ends_with(".tar.gz") && name.contains(arch) {
+                return Some((name.clone(), url.clone()));
+            }
+        }
+        #[cfg(all(unix, not(target_os = "macos")))]
+        {
+            let arch = if cfg!(target_arch = "aarch64") {
+                "Linux_aarch64"
+            } else {
+                "Linux_x86_64"
+            };
+            if name.ends_with(".tar.gz") && name.contains(arch) {
+                return Some((name.clone(), url.clone()));
+            }
+        }
+    }
+    #[cfg(windows)]
+    {
+        fallback
+    }
+    #[cfg(not(windows))]
+    {
+        None
+    }
+}
+
 #[cfg(windows)]
 fn driver_sync_done() -> &'static std::sync::Mutex<std::collections::HashSet<String>> {
     static DONE: std::sync::OnceLock<std::sync::Mutex<std::collections::HashSet<String>>> =
@@ -1150,7 +1374,7 @@ fn unique_local_name(cfg: &AppConfig, device: &str, display: &str, id: u32) -> S
 
 #[cfg(test)]
 mod naming_tests {
-    use super::unique_local_name;
+    use super::{unique_local_name, version_is_newer};
     use lanprint_core::{AppConfig, ClientPrinter};
 
     #[test]
@@ -1175,5 +1399,14 @@ mod naming_tests {
         let cfg = AppConfig::default();
         assert_eq!(unique_local_name(&cfg, "", "", 7), "lanPrint-7");
         assert_eq!(unique_local_name(&cfg, "Design-PC", "", 7), "Design-PC");
+    }
+
+    #[test]
+    fn compares_versions() {
+        assert!(version_is_newer("2.0.2", "2.0.1"));
+        assert!(version_is_newer("v2.1.0", "2.0.9"));
+        assert!(version_is_newer("2.0.10", "2.0.9"));
+        assert!(!version_is_newer("2.0.1", "2.0.1"));
+        assert!(!version_is_newer("1.9.9", "2.0.0"));
     }
 }

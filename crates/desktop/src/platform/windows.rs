@@ -559,6 +559,14 @@ pub fn remove_remote_printer(local_name: &str) -> Result<()> {
     Ok(())
 }
 
+pub fn launch_update(path: &Path) -> Result<()> {
+    std::process::Command::new(path)
+        .args(["/SILENT", "/CLOSEAPPLICATIONS", "/RESTARTAPPLICATIONS"])
+        .spawn()
+        .map_err(|e| AppError::Platform(format!("cannot start update: {e}")))?;
+    Ok(())
+}
+
 pub fn open_path(path: &Path) -> Result<()> {
     open::that(path).map_err(|e| AppError::Platform(format!("cannot open {}: {e}", path.display())))
 }

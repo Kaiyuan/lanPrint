@@ -75,6 +75,11 @@ pub fn remove_remote_printer(local_name: &str) -> Result<()> {
     imp::remove_remote_printer(local_name)
 }
 
+/// Start the downloaded platform update package.
+pub fn launch_update(path: &Path) -> Result<()> {
+    imp::launch_update(path)
+}
+
 /// Update the local queue defaults so the system print dialog starts from the
 /// same settings as the lanPrint dialog.
 pub fn apply_printer_preferences(local_name: &str, prefs: &PrinterPreferences) -> Result<()> {
