@@ -47,6 +47,9 @@ bytes = "1"
 urlencoding = "2"
 
 [target.'cfg(windows)'.dependencies]
-winapi = { version = "0.3", features = ["winspool", "winbase", "winerror", "minwindef", "windef", "handleapi", "dwmapi"] }
+winapi = { version = "0.3", features = ["winspool", "winbase", "winerror", "minwindef", "windef", "handleapi", "dwmapi", "wingdi"] }
+windows = { version = "0.62", features = ["Data_Pdf", "Foundation", "Storage_Streams", "Win32_System_WinRT"] }
+windows-future = { version = "0.3", features = ["std"] }
+png = "0.18"
 raw-window-handle = "0.6"
 

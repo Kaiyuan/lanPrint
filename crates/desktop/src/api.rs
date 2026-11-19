@@ -8,9 +8,9 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use lanprint_core::{
-    AuthRequest, AuthResponse, ErrorResponse, InfoResponse, JobRecord, JobsResponse, PrintResult,
-    PrinterTokenRequest, PrinterTokenResponse, PrintersResponse, ScanRequest, StatusResponse,
-    MAX_JOB_BYTES,
+    AuthRequest, AuthResponse, DuplexMode, ErrorResponse, InfoResponse, JobRecord, JobsResponse,
+    PrintResult, PrinterPreferences, PrinterTokenRequest, PrinterTokenResponse, PrintersResponse,
+    ScanRequest, StatusResponse, MAX_JOB_BYTES,
 };
 use serde_json::json;
 use tokio::net::TcpListener;
@@ -133,6 +133,90 @@ async fn printer_token(
     }))
 }
 
+/// Job preferences sent by the client, clamped to what the host printer can do.
+fn job_preferences(
+    headers: &HeaderMap,
+    printer: &str,
+    base: &PrinterPreferences,
+    app: &App,
+) -> PrinterPreferences {
+    use base64::Engine as _;
+    let decoded = headers
+        .get("x-lanprint-preferences")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| base64::engine::general_purpose::STANDARD.decode(v).ok())
+        .and_then(|b| serde_json::from_slice::<PrinterPreferences>(&b).ok());
+    let Some(mut prefs) = decoded else {
+        return base.clone();
+    };
+    let caps = app.printer_capabilities(printer);
+
+    if !caps.color {
+        prefs.color = false;
+    }
+    if prefs.duplex != DuplexMode::Simplex && caps.duplex {
+        let wanted = match prefs.duplex {
+            DuplexMode::LongEdge => "long_edge",
+            _ => "short_edge",
+        };
+        if !caps.duplex_modes.is_empty()
+            && !caps
+                .duplex_modes
+                .iter()
+                .any(|m| m.eq_ignore_ascii_case(wanted))
+        {
+            prefs.duplex = if caps.duplex_modes[0].eq_ignore_ascii_case("long_edge") {
+                DuplexMode::LongEdge
+            } else {
+                DuplexMode::ShortEdge
+            };
+        }
+    } else if !caps.duplex {
+        prefs.duplex = DuplexMode::Simplex;
+    }
+    if prefs.booklet && !caps.booklet {
+        prefs.booklet = false;
+    }
+    if prefs.booklet {
+        prefs.duplex = DuplexMode::LongEdge;
+    }
+    if caps.max_copies > 0 {
+        prefs.copies = prefs.copies().min(caps.max_copies);
+    }
+    if !caps.papers.is_empty() {
+        let known = |paper: &str| caps.papers.iter().any(|p| p.eq_ignore_ascii_case(paper));
+        if !known(&prefs.paper) {
+            prefs.paper = if known(&base.paper) {
+                base.paper.clone()
+            } else {
+                caps.papers[0].clone()
+            };
+        }
+    }
+    if !caps.sources.is_empty() && !prefs.media_source.is_empty() {
+        if let Some(source) = caps
+            .sources
+            .iter()
+            .find(|s| s.eq_ignore_ascii_case(&prefs.media_source))
+        {
+            prefs.media_source = source.clone();
+        } else {
+            prefs.media_source.clear();
+        }
+    }
+    if prefs.resolution > 0 && !caps.resolutions.is_empty() {
+        if !caps.resolutions.contains(&prefs.resolution) {
+            prefs.resolution = if caps.resolutions.contains(&base.resolution) {
+                base.resolution
+            } else {
+                0
+            };
+        }
+    }
+    prefs
+}
+
+#[allow(clippy::too_many_arguments)]
 async fn print_job(
     State(app): State<ApiState>,
     Path(name): Path<String>,
@@ -170,7 +254,7 @@ async fn print_job(
         .map(decode_component)
         .filter(|s| !s.is_empty())
         .unwrap_or_else(|| "job".to_string());
-    let prefs = shared.preferences.clone();
+    let prefs = job_preferences(&headers, &name, &shared.preferences, &app);
     let printer = name.clone();
     let len = body.len() as u64;
     let data = body.to_vec();

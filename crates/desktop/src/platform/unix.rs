@@ -141,10 +141,20 @@ fn caps_from_ppd(
                 caps.max_paper = "A3".into();
             }
         }
+        if line.starts_with("*PaperDimension") || line.starts_with("*PageSize ") {
+            let paper = friendly_paper(line);
+            if !paper.is_empty() && !caps.papers.iter().any(|p| p.eq_ignore_ascii_case(&paper)) {
+                caps.papers.push(paper);
+            }
+        }
         if line.contains("A3") && caps.max_paper == "A4" {
             caps.max_paper = "A3".into();
         }
     }
+    if caps.duplex {
+        caps.duplex_modes = vec!["long_edge".into(), "short_edge".into()];
+    }
+    caps.papers.sort();
     (caps, prefs)
 }
 
@@ -284,6 +294,12 @@ pub fn print_document(
     }
     if prefs.resolution > 0 {
         cmd.args(["-o", &format!("Resolution={}dpi", prefs.resolution)]);
+    }
+    if !prefs.media_source.is_empty() {
+        cmd.args(["-o", &format!("media-source={}", prefs.media_source)]);
+    }
+    if prefs.copies() > 1 {
+        cmd.args(["-o", &format!("copies={}", prefs.copies())]);
     }
     for (key, value) in &prefs.options {
         cmd.args(["-o", &format!("{key}={value}")]);

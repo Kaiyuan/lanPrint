@@ -6,9 +6,44 @@
 
 use std::io::Read;
 
+use lanprint_core::{DuplexMode, PrinterPreferences};
 use tracing::{error, info};
 
 use crate::client::{self, HostLink};
+
+/// Translate the CUPS job options into the preferences the host understands.
+fn preferences_from_options(options: &str) -> PrinterPreferences {
+    let mut prefs = PrinterPreferences {
+        // Empty paper means "use the host default".
+        paper: String::new(),
+        ..Default::default()
+    };
+    for token in options.split_whitespace() {
+        let (key, value) = token.split_once('=').unwrap_or((token, ""));
+        match key {
+            "sides" => {
+                prefs.duplex = match value {
+                    "two-sided-long-edge" => DuplexMode::LongEdge,
+                    "two-sided-short-edge" => DuplexMode::ShortEdge,
+                    _ => DuplexMode::Simplex,
+                };
+            }
+            "media" => prefs.paper = value.to_ascii_uppercase(),
+            "ColorModel" => prefs.color = !value.to_ascii_lowercase().contains("gray"),
+            "Resolution" | "printer-resolution" => {
+                let dpi: String = value.chars().take_while(|c| c.is_ascii_digit()).collect();
+                if let Ok(dpi) = dpi.parse() {
+                    prefs.resolution = dpi;
+                }
+            }
+            "InputSlot" | "media-source" => prefs.media_source = value.to_string(),
+            "booklet" | "Booklet" => prefs.booklet = value.eq_ignore_ascii_case("true"),
+            "copies" => prefs.copies = value.parse().unwrap_or(1),
+            _ => {}
+        }
+    }
+    prefs
+}
 
 pub fn run() -> ! {
     let args: Vec<String> = std::env::args().collect();
@@ -59,12 +94,21 @@ pub fn run() -> ! {
         }
     };
     let printer_inner = printer.clone();
+    let prefs = preferences_from_options(args.get(5).map(String::as_str).unwrap_or(""));
     let result = runtime.block_on(async move {
         let http = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(600))
             .build()?;
-        link.print(&http, &token, &printer_inner, data, content_type, &title)
-            .await
+        link.print(
+            &http,
+            &token,
+            &printer_inner,
+            data,
+            content_type,
+            &title,
+            &prefs,
+        )
+        .await
     });
     match result {
         Ok(_) => {

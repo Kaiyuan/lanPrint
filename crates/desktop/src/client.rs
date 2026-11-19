@@ -3,8 +3,8 @@ use std::time::Duration;
 use futures_util::{SinkExt, StreamExt};
 use lanprint_core::{
     AuthRequest, AuthResponse, CloudConnectRequest, CloudConnectResponse, ErrorResponse,
-    InfoResponse, PrintResult, PrinterTokenRequest, PrinterTokenResponse, PrintersResponse,
-    RelayFrame, ScanRequest, SharedPrinter,
+    InfoResponse, PrintResult, PrinterPreferences, PrinterTokenRequest, PrinterTokenResponse,
+    PrintersResponse, RelayFrame, ScanRequest, SharedPrinter,
 };
 use serde::de::DeserializeOwned;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
@@ -116,6 +116,7 @@ impl HostLink {
         parse_json(&bytes)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn print(
         &self,
         http: &reqwest::Client,
@@ -124,7 +125,11 @@ impl HostLink {
         data: Vec<u8>,
         content_type: &str,
         filename: &str,
+        prefs: &PrinterPreferences,
     ) -> Result<PrintResult> {
+        use base64::Engine as _;
+        let encoded = base64::engine::general_purpose::STANDARD
+            .encode(serde_json::to_vec(prefs).map_err(|e| AppError::Network(e.to_string()))?);
         let path = format!("/api/v1/printers/{}/jobs", url_encode(printer));
         let bytes = self
             .request(
@@ -135,6 +140,7 @@ impl HostLink {
                     ("x-lanprint-token", token),
                     ("content-type", content_type),
                     ("x-lanprint-filename", &url_encode(filename)),
+                    ("x-lanprint-preferences", &encoded),
                 ],
                 data,
             )

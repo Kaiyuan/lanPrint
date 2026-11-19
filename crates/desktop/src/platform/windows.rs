@@ -65,8 +65,6 @@ struct WmiPrinter {
     #[serde(default)]
     horizontal_resolution: Option<u32>,
     #[serde(default)]
-    paper_sizes_supported: Option<Vec<u32>>,
-    #[serde(default)]
     local: Option<bool>,
 }
 
@@ -109,29 +107,38 @@ $p | Select-Object Name,DriverName,PortName,Default,WorkOffline,PrinterStatus,Co
                 _ => "unknown",
             }
         };
+        let driver = super::windows_pdf::driver_caps(&p.name, &p.port_name);
+        let max_paper = if driver.papers.iter().any(|p| p == "A3") {
+            "A3"
+        } else {
+            "A4"
+        };
         let mut caps = PrinterCapabilities {
-            color: p.color.unwrap_or(false),
-            duplex: p.duplex.unwrap_or(false),
-            max_paper: if p
-                .paper_sizes_supported
-                .as_deref()
-                .unwrap_or(&[])
-                .contains(&8)
-            {
-                "A3"
-            } else {
-                "A4"
-            }
-            .into(),
+            color: driver.color.unwrap_or(p.color.unwrap_or(false)),
+            duplex: driver.duplex.unwrap_or(p.duplex.unwrap_or(false)),
+            max_paper: max_paper.into(),
             make_model: p.driver_name.clone(),
             supports_scan: false,
             scanner_id: String::new(),
-            resolutions: match p.horizontal_resolution {
-                Some(dpi) if dpi > 0 => vec![dpi],
-                _ => vec![300, 600],
+            resolutions: if driver.resolutions.is_empty() {
+                match p.horizontal_resolution {
+                    Some(dpi) if dpi > 0 => vec![dpi],
+                    _ => vec![300, 600],
+                }
+            } else {
+                driver.resolutions.clone()
             },
-            formats: vec!["raw".into(), "pdf".into(), "ps".into(), "text".into()],
+            formats: vec!["pdf".into(), "raw".into(), "ps".into(), "text".into()],
             options: Vec::new(),
+            papers: driver.papers.clone(),
+            sources: driver.sources.clone(),
+            duplex_modes: if driver.duplex.unwrap_or(p.duplex.unwrap_or(false)) {
+                vec!["long_edge".into(), "short_edge".into()]
+            } else {
+                Vec::new()
+            },
+            booklet: driver.duplex.unwrap_or(p.duplex.unwrap_or(false)),
+            max_copies: driver.max_copies,
         };
         if let Some(scanner) = match_scanner(&p.name, &scanners) {
             caps.supports_scan = true;
@@ -144,7 +151,7 @@ $p | Select-Object Name,DriverName,PortName,Default,WorkOffline,PrinterStatus,Co
             is_default: p.default.unwrap_or(false),
             status: status.into(),
             capabilities: caps,
-            preferences: PrinterPreferences::default(),
+            preferences: driver.preferences.clone(),
             available: p.local.unwrap_or(true),
         });
     }
@@ -304,13 +311,18 @@ pub fn print_document(
     data: &[u8],
     content_type: &str,
     _filename: &str,
-    _prefs: &PrinterPreferences,
+    prefs: &PrinterPreferences,
 ) -> Result<()> {
     let lower = content_type.to_ascii_lowercase();
+    if lower.contains("pdf") || data.starts_with(b"%PDF") {
+        match super::windows_pdf::print_pdf(printer, data, prefs) {
+            Ok(()) => return Ok(()),
+            Err(err) => warn!("PDF pipeline failed for {printer}: {err}; trying PrintTo"),
+        }
+    }
     if lower.contains("pdf") || lower.contains("postscript") {
-        // Prefer the installed PDF/PS handler with the PrintTo verb. This is
-        // available on Windows 7 machines with a PDF reader and on Windows 10+
-        // with the built-in browser. Fall back to the raw spooler path.
+        // Fallback for machines without the Windows PDF engine (Windows 7) or
+        // documents the engine rejects: use the installed PDF/PS handler.
         let suffix = if lower.contains("pdf") { ".pdf" } else { ".ps" };
         let mut tmp = tempfile::Builder::new()
             .prefix("lanprint-print-")
@@ -395,11 +407,15 @@ fn print_raw(printer: &str, data: &[u8]) -> Result<()> {
 
 /// Install a local virtual queue backed by a TCP port that the desktop app
 /// listens on and forwards to the remote host.
+///
+/// The queue uses the *Microsoft Print To PDF* driver when it is available so
+/// that the spooler renders every job to PDF instead of flattening it to text.
 pub fn install_remote_printer(
     local_name: &str,
     display_name: &str,
     driver: &str,
     tcp_port: u16,
+    prefs: &PrinterPreferences,
 ) -> Result<()> {
     let port_name = format!("lanPrint-{tcp_port}");
     let script = r#"
@@ -408,6 +424,8 @@ $portName = '__PORT_NAME__'
 $port = __PORT__
 $localName = '__LOCAL__'
 $driver = '__DRIVER__'
+$paper = '__PAPER__'
+$color = __COLOR__
 try {
   Add-PrinterPort -Name $portName -PrinterHostAddress '127.0.0.1' -PortNumber $port -ErrorAction Stop
 } catch {
@@ -416,18 +434,28 @@ try {
 }
 $installed = @()
 try { $installed = @(Get-PrinterDriver | Select-Object -ExpandProperty Name) } catch {}
+$pdfDriver = 'Microsoft Print To PDF'
 $useDriver = 'Generic / Text Only'
-if ($driver -and ($installed -contains $driver)) { $useDriver = $driver }
+if ($installed -contains $pdfDriver) {
+  $useDriver = $pdfDriver
+} elseif ($driver -and ($installed -contains $driver)) {
+  $useDriver = $driver
+}
 try {
   Add-Printer -Name $localName -DriverName $useDriver -PortName $portName -ErrorAction Stop
 } catch {
   rundll32 printui.dll,PrintUIEntry /if /b "$localName" /f "$env:WINDIR\inf\ntprint.inf" /r "$portName" /m "Generic / Text Only"
 }
+try {
+  Set-PrintConfiguration -PrinterName $localName -PaperSize $paper -Color:$color -ErrorAction Stop
+} catch {}
 "#
     .replace("__PORT_NAME__", &ps_quote(&port_name))
     .replace("__PORT__", &tcp_port.to_string())
     .replace("__LOCAL__", &ps_quote(local_name))
-    .replace("__DRIVER__", &ps_quote(driver));
+    .replace("__DRIVER__", &ps_quote(driver))
+    .replace("__PAPER__", &ps_quote(&prefs.paper))
+    .replace("__COLOR__", if prefs.color { "$true" } else { "$false" });
     powershell(&script)?;
     debug!("installed Windows virtual printer {local_name} on {port_name} ({display_name})");
     Ok(())

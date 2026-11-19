@@ -2673,6 +2673,7 @@ dependencies = [
  "lanprint-core",
  "mdns-sd",
  "open",
+ "png",
  "rand 0.8.8",
  "raw-window-handle",
  "reqwest",
@@ -2694,6 +2695,8 @@ dependencies = [
  "urlencoding",
  "uuid",
  "winapi",
+ "windows",
+ "windows-future",
  "winres",
 ]
 

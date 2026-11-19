@@ -47,6 +47,9 @@ impl Forwarder {
                     match read {
                         Ok(Ok(_)) if !data.is_empty() => {
                             let (content_type, filename) = sniff(&data);
+                            let prefs = app
+                                .client_preferences(&client.local_name)
+                                .unwrap_or_else(|| client.preferences.clone());
                             if let Err(err) = app
                                 .send_print(
                                     &client.device_id,
@@ -55,6 +58,7 @@ impl Forwarder {
                                     data,
                                     content_type,
                                     filename,
+                                    &prefs,
                                 )
                                 .await
                             {

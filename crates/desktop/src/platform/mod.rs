@@ -9,6 +9,8 @@ use crate::error::Result;
 #[cfg(windows)]
 mod windows;
 #[cfg(windows)]
+mod windows_pdf;
+#[cfg(windows)]
 use windows as imp;
 
 #[cfg(unix)]
@@ -60,8 +62,8 @@ pub fn install_remote_printer(
 ) -> Result<()> {
     #[cfg(windows)]
     {
-        let _ = (uri, prefs);
-        imp::install_remote_printer(local_name, display_name, driver, tcp_port)
+        let _ = uri;
+        imp::install_remote_printer(local_name, display_name, driver, tcp_port, prefs)
     }
     #[cfg(unix)]
     {
@@ -79,46 +81,6 @@ pub fn open_path(path: &Path) -> Result<()> {
 
 pub fn log_dir() -> std::path::PathBuf {
     imp::log_dir()
-}
-
-/// Open the operating system's printer preference dialog for a local queue.
-pub fn open_printer_preferences(name: &str) -> Result<()> {
-    #[cfg(windows)]
-    {
-        use std::os::windows::process::CommandExt;
-        let status = std::process::Command::new("rundll32")
-            .args(["printui.dll,PrintUIEntry", "/e", "/n", name])
-            .creation_flags(0x0800_0000)
-            .status()
-            .map_err(|e| crate::error::AppError::Platform(e.to_string()))?;
-        if !status.success() {
-            return Err(crate::error::AppError::Platform(
-                "could not open printer preferences".into(),
-            ));
-        }
-        Ok(())
-    }
-    #[cfg(unix)]
-    {
-        // CUPS does not define a portable GUI. Prefer the desktop printer
-        // configuration tool when present and fall back to the CUPS web UI.
-        let candidates = ["system-config-printer", "system-config-printer.py"];
-        for candidate in candidates {
-            if std::process::Command::new(candidate)
-                .arg("--show-printer-properties")
-                .arg(name)
-                .spawn()
-                .is_ok()
-            {
-                return Ok(());
-            }
-        }
-        let url = format!(
-            "http://localhost:631/printers/{}",
-            crate::client::url_encode(name)
-        );
-        open::that(url).map_err(|e| crate::error::AppError::Platform(e.to_string()))
-    }
 }
 
 /// Copy text to the system clipboard using the platform helper utilities.

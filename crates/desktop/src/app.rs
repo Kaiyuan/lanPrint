@@ -285,6 +285,18 @@ impl App {
         self.config.read().shared_printer(name).cloned()
     }
 
+    /// Capabilities of a local printer as last enumerated by the spooler.
+    pub fn printer_capabilities(&self, name: &str) -> lanprint_core::PrinterCapabilities {
+        self.state
+            .read()
+            .unwrap()
+            .local_printers
+            .iter()
+            .find(|p| p.name == name)
+            .map(|p| p.capabilities.clone())
+            .unwrap_or_default()
+    }
+
     // ---- mDNS -----------------------------------------------------------
 
     pub async fn refresh_mdns(self: &Arc<Self>) {
@@ -473,6 +485,13 @@ impl App {
             for cp in &mut cfg.client_printers {
                 if cp.device_id == device_id {
                     cp.online = true;
+                    if let Some(shared) = printers
+                        .iter()
+                        .find(|p| p.name == cp.remote_name && p.enabled)
+                    {
+                        cp.capabilities = shared.capabilities.clone();
+                        cp.supports_scan = shared.supports_scan;
+                    }
                 }
             }
         });
@@ -582,6 +601,7 @@ impl App {
         let local_name = unique_local_name(&cfg, &shared.display_name, id);
         let display = shared.display_name.clone();
         let prefs = shared.preferences.clone();
+        let capabilities = shared.capabilities.clone();
         let supports_scan = shared.supports_scan;
         let tcp_port = 19_100u16.saturating_add(id as u16 % 800);
 
@@ -617,6 +637,7 @@ impl App {
                 online: true,
                 installed: false,
                 preferences: prefs.clone(),
+                capabilities: capabilities.clone(),
                 last_error: String::new(),
             };
             let forwarder = Forwarder::start(app, client_printer, tcp_port).await?;
@@ -653,6 +674,7 @@ impl App {
             online: true,
             installed: true,
             preferences: prefs,
+            capabilities,
             last_error: String::new(),
         };
         self.config.edit(|cfg| cfg.client_printers.push(cp.clone()));
@@ -703,6 +725,40 @@ impl App {
         Ok(())
     }
 
+    /// Current job settings for a client printer, used by the spool forwarder
+    /// so changes in the UI apply to the next job without restarting it.
+    pub fn client_preferences(&self, local_name: &str) -> Option<PrinterPreferences> {
+        self.config
+            .read()
+            .client_printers
+            .iter()
+            .find(|p| p.local_name == local_name)
+            .map(|p| p.preferences.clone())
+    }
+
+    pub fn set_client_preferences(
+        &self,
+        local_name: &str,
+        prefs: PrinterPreferences,
+    ) -> Result<()> {
+        let mut found = false;
+        self.config.edit(|cfg| {
+            if let Some(cp) = cfg
+                .client_printers
+                .iter_mut()
+                .find(|p| p.local_name == local_name)
+            {
+                cp.preferences = prefs.clone();
+                found = true;
+            }
+        });
+        if !found {
+            return Err(AppError::Network("printer not found".into()));
+        }
+        self.emit(AppEvent::Refresh);
+        Ok(())
+    }
+
     pub async fn test_print(self: &Arc<Self>, local_name: String) -> Result<()> {
         let cp = self
             .config
@@ -729,6 +785,7 @@ impl App {
             data,
             "text/plain",
             "lanprint-test.txt",
+            &cp.preferences,
         )
         .await?;
         self.emit(AppEvent::Toast("test_print_sent".into()));
@@ -785,6 +842,7 @@ impl App {
         data: Vec<u8>,
         content_type: &str,
         filename: &str,
+        prefs: &lanprint_core::PrinterPreferences,
     ) -> Result<()> {
         let device = self
             .config
@@ -795,8 +853,16 @@ impl App {
             .cloned()
             .ok_or_else(|| AppError::Network("device not found".into()))?;
         let link = device_link(&device);
-        link.print(&self.http, token, printer, data, content_type, filename)
-            .await?;
+        link.print(
+            &self.http,
+            token,
+            printer,
+            data,
+            content_type,
+            filename,
+            prefs,
+        )
+        .await?;
         Ok(())
     }
 

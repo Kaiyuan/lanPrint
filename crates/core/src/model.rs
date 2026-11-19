@@ -39,6 +39,10 @@ pub struct PrinterPreferences {
     pub media_source: String,
     /// Extra driver options as `key=value` pairs.
     pub options: Vec<(String, String)>,
+    /// Impose two pages per side, folded like a book. Requires duplex.
+    pub booklet: bool,
+    /// Number of copies; every value below one means "one copy".
+    pub copies: u32,
 }
 
 impl Default for PrinterPreferences {
@@ -50,7 +54,16 @@ impl Default for PrinterPreferences {
             resolution: 0,
             media_source: String::new(),
             options: Vec::new(),
+            booklet: false,
+            copies: 1,
         }
+    }
+}
+
+impl PrinterPreferences {
+    /// Copies that should actually be printed.
+    pub fn copies(&self) -> u32 {
+        self.copies.max(1)
     }
 }
 
@@ -69,6 +82,16 @@ pub struct PrinterCapabilities {
     pub formats: Vec<String>,
     /// Host-side option names that can be applied to a job.
     pub options: Vec<PrinterOption>,
+    /// Paper sizes accepted by the driver, e.g. `A4`, `A3`, `Letter`.
+    pub papers: Vec<String>,
+    /// Input trays / media sources as reported by the driver.
+    pub sources: Vec<String>,
+    /// Duplex orientations the driver supports: `long_edge`, `short_edge`.
+    pub duplex_modes: Vec<String>,
+    /// The host can impose booklets for this printer.
+    pub booklet: bool,
+    /// Maximum copies the driver accepts; zero means unknown.
+    pub max_copies: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -218,6 +241,9 @@ pub struct ClientPrinter {
     pub online: bool,
     pub installed: bool,
     pub preferences: PrinterPreferences,
+    /// Capabilities advertised by the host, kept so the client can show which
+    /// features (duplex, booklet, trays, ...) the remote printer offers.
+    pub capabilities: PrinterCapabilities,
     pub last_error: String,
 }
 
@@ -236,6 +262,7 @@ impl Default for ClientPrinter {
             online: false,
             installed: false,
             preferences: PrinterPreferences::default(),
+            capabilities: PrinterCapabilities::default(),
             last_error: String::new(),
         }
     }
