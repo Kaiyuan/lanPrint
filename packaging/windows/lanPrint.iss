@@ -29,6 +29,9 @@ MinVersion=6.1sp1
 ; inbound firewall rule. Users can still pick a per-user install in the dialog.
 PrivilegesRequired=admin
 PrivilegesRequiredOverridesAllowed=dialog
+; Autostart is a per-user setting controlled from the app, so HKCU is used on
+; purpose even in the default all-users install.
+UsedUserAreasWarning=no
 UninstallDisplayIcon={app}\lanPrint.exe
 SetupIconFile=..\..\crates\desktop\ui\assets\lanprint-icon.ico
 LicenseFile=..\..\LICENSE
@@ -52,9 +55,7 @@ Name: "{group}\Uninstall lanPrint"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\lanPrint"; Filename: "{app}\lanPrint.exe"; Tasks: desktopicon
 
 [Registry]
-; HKA resolves to HKLM in the default all-users install and to HKCU when the
-; user chooses a per-user install.
-Root: HKA; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "lanPrint"; ValueData: """{app}\lanPrint.exe"" --tray"; Flags: uninsdeletevalue; Tasks: autostart
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "lanPrint"; ValueData: """{app}\lanPrint.exe"" --tray"; Flags: uninsdeletevalue; Tasks: autostart
 
 [Run]
 ; Allow inbound connections from clients and mDNS discovery. The rule is
