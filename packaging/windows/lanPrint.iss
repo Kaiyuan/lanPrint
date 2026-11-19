@@ -1,7 +1,7 @@
 ; Inno Setup script for lanPrint (Windows 7+)
-; Build: iscc /DMyAppVersion=2.0.1 packaging\windows\lanPrint.iss
+; Build: iscc /DMyAppVersion=2.0.2 packaging\windows\lanPrint.iss
 #ifndef MyAppVersion
-  #define MyAppVersion "2.0.1"
+  #define MyAppVersion "2.0.2"
 #endif
 #ifndef MySource
   #define MySource "..\..\target\release\lanPrint.exe"
