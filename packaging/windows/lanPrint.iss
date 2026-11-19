@@ -61,7 +61,7 @@ Root: HKA; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: s
 ; tied to lanPrint.exe so it keeps working after updates.
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""lanPrint"""; Flags: runhidden; StatusMsg: "Updating the Windows Firewall rule..."
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall add rule name=""lanPrint"" dir=in action=allow program=""{app}\lanPrint.exe"" enable=yes profile=any"; Flags: runhidden; StatusMsg: "Adding the Windows Firewall rule..."
-Filename: "{app}\lanPrint.exe"; Description: "{cm:LaunchProgram,lanPrint}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\lanPrint.exe"; Description: "{cm:LaunchProgram,lanPrint}"; Flags: nowait postinstall skipifsilent runasoriginaluser
 
 [UninstallRun]
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""lanPrint"""; Flags: runhidden; RunOnceId: "RemoveFirewallRule"
