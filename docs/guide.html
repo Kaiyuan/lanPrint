@@ -120,6 +120,7 @@ curl -fsSL https://raw.githubusercontent.com/Kaiyuan/lanPrint/main/scripts/insta
 
       <h2 id="prefs" data-i18n="prefs_title">Print settings</h2>
       <p data-i18n="prefs_desc">The client renders every job to PDF and sends it to the host, which prints it with the real printer driver. lanPrint reads the host printer’s capabilities (paper sizes, trays, duplex, booklet, colour, copies) and shows them in the “Print settings” dialog of each added printer.</p>
+      <p data-i18n="prefs_driver">On Windows the client creates its local queue with the same driver as the host printer whenever that driver is installed. The system print dialog then shows the printer’s real duplex, colour, tray and finishing options; lanPrint only falls back to a PDF queue when the driver is missing.</p>
       <div class="steps">
         <div class="step"><h3 data-i18n="prefs_step1">Open the dialog</h3><p data-i18n="prefs_step1_desc">Click the settings button on an added printer. Only options the host printer really supports are shown.</p></div>
         <div class="step"><h3 data-i18n="prefs_step2">Pick the options</h3><p data-i18n="prefs_step2_desc">Two-sided printing (long or short edge), booklet, colour mode, paper size, input tray and copies. Booklet imposes two pages per side and needs duplex.</p></div>

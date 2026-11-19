@@ -22,6 +22,7 @@ Supported systems: **Windows 7+, macOS 10.15+, Ubuntu / Debian / UOS / Deepin**.
 - **Real virtual printers** — added queues appear in the system print dialog.
   - Windows: local TCP spool port + Win32 spooler API.
   - Linux/macOS: CUPS backend + `lpadmin` queue.
+- **Host-matching print features** — the client builds its local queue with the host printer's own driver when that driver is installed, so the Windows print dialog exposes the real duplex, colour, tray and finishing options. A PDF queue is used only when the driver is missing.
 - **PDF print pipeline** — the client renders jobs to PDF; the host rasterises each page and prints it through the real printer driver, with no PDF reader dependency.
 - **Per-printer print settings** — paper sizes, trays, duplex, booklet, colour and copies are read from the host printer and adjustable in the in-app “Print settings” dialog; the host clamps every job to the printer's real capabilities.
 - **Scanning** — WIA on Windows, SANE/`scanimage` on Linux and macOS.
