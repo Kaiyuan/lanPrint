@@ -181,7 +181,8 @@ fn main() {
         }
     }
 
-    let show_window = !tray_mode || config_first_run(&app);
+    // Autostart and tray mode stay in the tray; only an explicit launch opens the window.
+    let show_window = !tray_mode;
     let open_settings = args.iter().any(|a| a == "--settings");
     let settings_tab = args
         .iter()
@@ -202,11 +203,6 @@ fn main() {
     runtime.block_on(async {
         app.shutdown().await;
     });
-}
-
-fn config_first_run(app: &Arc<app::App>) -> bool {
-    let cfg = app.config.read();
-    cfg.first_run && !cfg.has_host_password()
 }
 
 fn install_panic_hook() {

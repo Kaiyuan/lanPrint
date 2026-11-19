@@ -48,13 +48,12 @@ Source: "..\..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Name: "{group}\lanPrint"; Filename: "{app}\lanPrint.exe"
 Name: "{group}\Uninstall lanPrint"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\lanPrint"; Filename: "{app}\lanPrint.exe"; Tasks: desktopicon
-Name: "{userstartup}\lanPrint"; Filename: "{app}\lanPrint.exe"; Parameters: "--tray"; Tasks: autostart
 
 [Registry]
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "lanPrint"; ValueData: """{app}\lanPrint.exe"" --tray"; Flags: uninsdeletevalue; Tasks: autostart
 
 [Run]
-Filename: "{app}\lanPrint.exe"; Parameters: "--tray"; Description: "{cm:LaunchProgram,lanPrint}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\lanPrint.exe"; Description: "{cm:LaunchProgram,lanPrint}"; Flags: nowait postinstall skipifsilent
 
 [UninstallRun]
 Filename: "{cmd}"; Parameters: "/C taskkill /IM lanPrint.exe /F >NUL 2>&1"; Flags: runhidden; RunOnceId: "StopLanPrint"

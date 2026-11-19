@@ -6,6 +6,9 @@
 
 use std::process::Command;
 
+#[cfg(unix)]
+use std::path::PathBuf;
+
 use tracing::warn;
 
 use crate::error::{AppError, Result};
@@ -17,7 +20,7 @@ pub fn set_enabled(enabled: bool) -> Result<()> {
     #[cfg(windows)]
     {
         if enabled {
-            let value = format!("\"{}\"", exe.display());
+            let value = format!("\"{}\" --tray", exe.display());
             let status = hide_window(Command::new("reg"))
                 .args([
                     "add",
