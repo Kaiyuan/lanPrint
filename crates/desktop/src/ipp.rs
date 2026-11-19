@@ -713,6 +713,10 @@ fn printer_attributes(client: &ClientPrinter) -> Vec<Attribute> {
         keyword("uri-security-supported", "none"),
         keyword("uri-authentication-supported", "none"),
         name_attr("printer-name", &client.local_name),
+        uri(
+            "printer-uuid",
+            &format!("urn:uuid:00000000-0000-4000-8000-{:012x}", client.id),
+        ),
         text("printer-info", &client.display_name),
         text(
             "printer-make-and-model",
@@ -766,6 +770,7 @@ fn printer_attributes(client: &ClientPrinter) -> Vec<Attribute> {
         keyword("job-creation-attributes-supported", "print-color-mode"),
         keyword("job-creation-attributes-supported", "media-source"),
         keyword("job-creation-attributes-supported", "printer-resolution"),
+        keyword("job-creation-attributes-supported", "job-name"),
         enum_attr("operations-supported", OP_PRINT_JOB as i32),
         enum_attr("operations-supported", OP_VALIDATE_JOB as i32),
         enum_attr("operations-supported", OP_CREATE_JOB as i32),

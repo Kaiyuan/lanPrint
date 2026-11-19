@@ -270,7 +270,7 @@ impl App {
             }
         });
 
-        if !std::env::args().any(|arg| arg == "--tray") {
+        if cfg!(windows) || !std::env::args().any(|arg| arg == "--tray") {
             let upgrader = self.clone();
             tokio::spawn(async move {
                 tokio::time::sleep(std::time::Duration::from_secs(1)).await;
