@@ -10,12 +10,13 @@ use axum::{Json, Router};
 use lanprint_core::{
     AuthRequest, AuthResponse, DuplexMode, ErrorResponse, InfoResponse, JobRecord, JobsResponse,
     PrintResult, PrinterPreferences, PrinterTokenRequest, PrinterTokenResponse, PrintersResponse,
-    ScanRequest, StatusResponse, MAX_JOB_BYTES,
+    ScanRequest, StatusResponse, TokenClaims, MAX_JOB_BYTES,
 };
 use serde_json::json;
 use tokio::net::TcpListener;
 use tracing::{info, warn};
 
+use crate::activity::{ActivityEntry, ActivityKind};
 use crate::app::App;
 use crate::error::AppError;
 use crate::platform;
@@ -58,6 +59,8 @@ async fn health() -> Json<serde_json::Value> {
 
 async fn auth(
     State(app): State<ApiState>,
+    headers: HeaderMap,
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
     Json(req): Json<AuthRequest>,
 ) -> Result<Json<AuthResponse>, ApiError> {
     if !app.config.read().has_host_password() {
@@ -76,15 +79,21 @@ async fn auth(
         ));
     }
     let (token, expires_at) = app.issue_host_token()?;
+    record_connect(&app, &headers, &peer, req.device_id, req.device_name);
     Ok(Json(AuthResponse { token, expires_at }))
 }
 
 async fn list_printers(
     State(app): State<ApiState>,
     headers: HeaderMap,
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
 ) -> Result<Json<PrintersResponse>, ApiError> {
     let token = bearer(&headers).ok_or_else(|| ApiError::unauthorized())?;
     app.authorize_host_token(token)?;
+    let (device_id, device) = client_identity(&headers);
+    if !device.is_empty() {
+        record_connect(&app, &headers, &peer, device_id, device);
+    }
     Ok(Json(PrintersResponse {
         printers: app.shared_printers(),
     }))
@@ -125,12 +134,95 @@ async fn printer_token(
             "invalid printer access code",
         ));
     }
-    let (token, expires_at) = app.issue_printer_token(&name)?;
+    let (token, expires_at) = app.issue_printer_token(&name, &req.device_name)?;
     Ok(Json(PrinterTokenResponse {
         token,
         expires_at,
         local_password_required: has_password,
     }))
+}
+
+fn is_cloud(headers: &HeaderMap) -> bool {
+    headers.contains_key("x-lanprint-cloud")
+}
+
+fn client_identity(headers: &HeaderMap) -> (String, String) {
+    let id = headers
+        .get("x-lanprint-device-id")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or_default()
+        .to_string();
+    let name = headers
+        .get("x-lanprint-device-name")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or_default()
+        .to_string();
+    (id, name)
+}
+
+fn record_connect(
+    app: &App,
+    headers: &HeaderMap,
+    peer: &SocketAddr,
+    device_id: String,
+    device: String,
+) {
+    let cloud = is_cloud(headers);
+    app.record_activity(ActivityEntry {
+        time: chrono::Utc::now().timestamp(),
+        kind: ActivityKind::Connect,
+        device,
+        device_id,
+        channel: if cloud { "cloud" } else { "lan" }.into(),
+        address: if cloud {
+            String::new()
+        } else {
+            peer.ip().to_string()
+        },
+        printer: String::new(),
+        filename: String::new(),
+        bytes: 0,
+        status: "connected".into(),
+        message: String::new(),
+    });
+}
+
+#[allow(clippy::too_many_arguments)]
+fn print_activity(
+    app: &App,
+    claims: &TokenClaims,
+    headers: &HeaderMap,
+    peer: &SocketAddr,
+    printer: &str,
+    filename: &str,
+    bytes: u64,
+    status: &str,
+    message: String,
+) {
+    let cloud = is_cloud(headers);
+    let (header_id, header_name) = client_identity(headers);
+    let device = if claims.dname.is_empty() {
+        header_name
+    } else {
+        claims.dname.clone()
+    };
+    app.record_activity(ActivityEntry {
+        time: chrono::Utc::now().timestamp(),
+        kind: ActivityKind::Print,
+        device,
+        device_id: header_id,
+        channel: if cloud { "cloud" } else { "lan" }.into(),
+        address: if cloud {
+            String::new()
+        } else {
+            peer.ip().to_string()
+        },
+        printer: printer.to_string(),
+        filename: filename.to_string(),
+        bytes,
+        status: status.to_string(),
+        message,
+    });
 }
 
 /// Job preferences sent by the client, clamped to what the host printer can do.
@@ -225,7 +317,7 @@ async fn print_job(
     body: Bytes,
 ) -> Result<Json<PrintResult>, ApiError> {
     let token = token_header(&headers).ok_or_else(|| ApiError::unauthorized())?;
-    app.authorize_printer_token(token, &name)?;
+    let claims = app.authorize_printer_token(token, &name)?;
     let shared = app
         .shared_config(&name)
         .filter(|p| p.enabled)
@@ -269,6 +361,18 @@ async fn print_job(
     let job_id = uuid::Uuid::new_v4().to_string();
     if let Err(err) = result {
         warn!("print job for {printer} failed: {err}");
+        let message = err.to_string();
+        print_activity(
+            &app,
+            &claims,
+            &headers,
+            &peer,
+            &printer,
+            &filename,
+            len,
+            "failed",
+            message.clone(),
+        );
         app.record_job(JobRecord {
             id: job_id,
             printer,
@@ -276,7 +380,7 @@ async fn print_job(
             filename,
             bytes: len,
             status: "failed".into(),
-            message: err.to_string(),
+            message,
             created_at: chrono::Utc::now().timestamp(),
             finished_at: chrono::Utc::now().timestamp(),
         });
@@ -286,6 +390,17 @@ async fn print_job(
             err.to_string(),
         ));
     }
+    print_activity(
+        &app,
+        &claims,
+        &headers,
+        &peer,
+        &printer,
+        &filename,
+        len,
+        "sent",
+        String::new(),
+    );
     app.record_job(JobRecord {
         id: job_id.clone(),
         printer: printer.clone(),

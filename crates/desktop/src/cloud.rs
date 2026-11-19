@@ -268,6 +268,7 @@ async fn serve_relay_request(
         }
         builder = builder.header(lower, value);
     }
+    builder = builder.header("x-lanprint-cloud", "1");
     let resp = match builder.send().await {
         Ok(resp) => resp,
         Err(err) => {

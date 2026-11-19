@@ -11,10 +11,29 @@ use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::Message;
 use tracing::debug;
 
+use std::sync::OnceLock;
+
 use crate::error::{AppError, Result};
 
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 const CHUNK: usize = 256 * 1024;
+
+static IDENTITY: OnceLock<(String, String)> = OnceLock::new();
+
+/// Remember this device's identity so every host request can carry it. The
+/// host uses it for the activity log.
+pub fn set_identity(device_id: &str, device_name: &str) {
+    let _ = IDENTITY.set((device_id.to_string(), device_name.to_string()));
+}
+
+fn with_identity<'a>(headers: &[(&'a str, &'a str)]) -> Vec<(&'a str, &'a str)> {
+    let mut all = headers.to_vec();
+    if let Some((id, name)) = IDENTITY.get() {
+        all.push(("x-lanprint-device-id", id.as_str()));
+        all.push(("x-lanprint-device-name", name.as_str()));
+    }
+    all
+}
 
 #[derive(Clone, Debug)]
 pub enum HostLink {
@@ -56,9 +75,17 @@ impl HostLink {
         parse_json(&bytes)
     }
 
-    pub async fn auth(&self, http: &reqwest::Client, password: &str) -> Result<AuthResponse> {
+    pub async fn auth(
+        &self,
+        http: &reqwest::Client,
+        password: &str,
+        device_id: &str,
+        device_name: &str,
+    ) -> Result<AuthResponse> {
         let body = serde_json::to_vec(&AuthRequest {
             password: password.to_string(),
+            device_id: device_id.to_string(),
+            device_name: device_name.to_string(),
         })?;
         let bytes = self
             .request(
@@ -96,9 +123,13 @@ impl HostLink {
         host_token: &str,
         printer: &str,
         password: &str,
+        device_id: &str,
+        device_name: &str,
     ) -> Result<PrinterTokenResponse> {
         let body = serde_json::to_vec(&PrinterTokenRequest {
             password: password.to_string(),
+            device_id: device_id.to_string(),
+            device_name: device_name.to_string(),
         })?;
         let path = format!("/api/v1/printers/{}/token", url_encode(printer));
         let bytes = self
@@ -178,13 +209,14 @@ impl HostLink {
         headers: &[(&str, &str)],
         body: Vec<u8>,
     ) -> Result<Vec<u8>> {
+        let headers = with_identity(headers);
         match self {
             Self::Lan { base } => {
                 let url = format!("{base}{path}");
                 let method = reqwest::Method::from_bytes(method.as_bytes())
                     .map_err(|e| AppError::Network(e.to_string()))?;
                 let mut req = http.request(method, &url).body(body);
-                for (k, v) in headers {
+                for (k, v) in &headers {
                     req = req.header(*k, *v);
                 }
                 let resp = tokio::time::timeout(REQUEST_TIMEOUT, req.send())
@@ -198,7 +230,7 @@ impl HostLink {
                 Ok(bytes)
             }
             Self::Cloud { server, share_code } => {
-                cloud_request(server, share_code, method, path, headers, body).await
+                cloud_request(server, share_code, method, path, &headers, body).await
             }
         }
     }

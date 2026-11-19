@@ -76,6 +76,9 @@ pub struct TokenClaims {
     /// Printer name for printer scoped tokens.
     #[serde(default)]
     pub printer: String,
+    /// Display name of the client that requested a printer token.
+    #[serde(default)]
+    pub dname: String,
     /// Unix seconds.
     pub exp: i64,
     /// Random id to keep tokens unique.
@@ -88,6 +91,7 @@ impl TokenClaims {
             dev: device_id.to_string(),
             scope: "host".into(),
             printer: String::new(),
+            dname: String::new(),
             exp: chrono::Utc::now().timestamp() + ttl_secs,
             jti: uuid::Uuid::new_v4().to_string(),
         }
@@ -98,6 +102,7 @@ impl TokenClaims {
             dev: device_id.to_string(),
             scope: "printer".into(),
             printer: printer.to_string(),
+            dname: String::new(),
             exp: chrono::Utc::now().timestamp() + ttl_secs,
             jti: uuid::Uuid::new_v4().to_string(),
         }

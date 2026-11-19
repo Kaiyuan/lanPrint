@@ -45,6 +45,7 @@ pub struct App {
     mdns: Mutex<Option<ServiceDaemon>>,
     cloud_task: Mutex<Option<tokio::task::JoinHandle<()>>>,
     relay_tx: Mutex<Option<tokio::sync::mpsc::UnboundedSender<lanprint_core::RelayFrame>>>,
+    activity: crate::activity::ActivityLog,
 }
 
 impl App {
@@ -55,7 +56,12 @@ impl App {
             .user_agent(format!("lanPrint/{}", lanprint_core::VERSION))
             .build()
             .map_err(AppError::from)?;
+        {
+            let cfg = config.read();
+            crate::client::set_identity(&cfg.device_id, &cfg.device_name);
+        }
         Ok(Arc::new(Self {
+            activity: crate::activity::ActivityLog::load(&config.config_dir()),
             config,
             http,
             state: RwLock::new(Runtime::default()),
@@ -69,6 +75,15 @@ impl App {
 
     pub fn emit(&self, event: AppEvent) {
         let _ = self.events.send(event);
+    }
+
+    pub fn activity(&self) -> Vec<crate::activity::ActivityEntry> {
+        self.activity.entries()
+    }
+
+    pub fn record_activity(&self, entry: crate::activity::ActivityEntry) {
+        self.activity.record(entry);
+        self.emit(AppEvent::Refresh);
     }
 
     pub fn snapshot(&self) -> RuntimeSnapshot {
@@ -200,10 +215,16 @@ impl App {
         Ok((issue_token(&secret, &claims), claims.exp))
     }
 
-    pub fn issue_printer_token(&self, printer: &str) -> Result<(String, i64)> {
+    fn identity(&self) -> (String, String) {
+        let cfg = self.config.read();
+        (cfg.device_id.clone(), cfg.device_name.clone())
+    }
+
+    pub fn issue_printer_token(&self, printer: &str, client_name: &str) -> Result<(String, i64)> {
         let cfg = self.config.read();
         let secret = decode_secret(&cfg.host_secret);
-        let claims = TokenClaims::printer(&cfg.device_id, printer, PRINTER_TOKEN_TTL);
+        let mut claims = TokenClaims::printer(&cfg.device_id, printer, PRINTER_TOKEN_TTL);
+        claims.dname = client_name.to_string();
         Ok((issue_token(&secret, &claims), claims.exp))
     }
 
@@ -400,13 +421,17 @@ impl App {
         };
 
         let info = link.info(&self.http).await?;
-        let auth = link.auth(&self.http, &password).await.map_err(|err| {
-            if err.to_string().contains("401") {
-                AppError::Auth("wrong_password".into())
-            } else {
-                err
-            }
-        })?;
+        let (client_id, client_name) = self.identity();
+        let auth = link
+            .auth(&self.http, &password, &client_id, &client_name)
+            .await
+            .map_err(|err| {
+                if err.to_string().contains("401") {
+                    AppError::Auth("wrong_password".into())
+                } else {
+                    err
+                }
+            })?;
 
         let device = RemoteDevice {
             id: info.device_id.clone(),
@@ -455,7 +480,11 @@ impl App {
         let mut token = device.host_token.clone();
         if token.is_empty() || device.host_token_exp < chrono::Utc::now().timestamp() {
             if !device.password.is_empty() {
-                if let Ok(auth) = link.auth(&self.http, &device.password).await {
+                let (client_id, client_name) = self.identity();
+                if let Ok(auth) = link
+                    .auth(&self.http, &device.password, &client_id, &client_name)
+                    .await
+                {
                     token = auth.token.clone();
                     self.config.edit(|cfg| {
                         if let Some(d) = cfg.remote_devices.iter_mut().find(|d| d.id == device_id) {
@@ -624,8 +653,16 @@ impl App {
         if shared.has_password && password.is_empty() {
             return Err(AppError::Auth("printer password required".into()));
         }
+        let (client_id, client_name) = self.identity();
         let printer_token = link
-            .printer_token(&self.http, &host_token, &printer_name, &password)
+            .printer_token(
+                &self.http,
+                &host_token,
+                &printer_name,
+                &password,
+                &client_id,
+                &client_name,
+            )
             .await?;
 
         let cfg = self.config.read().clone();
@@ -961,7 +998,10 @@ impl App {
             HostLink::lan(&host, port, false)
         };
         let info = link.info(&self.http).await?;
-        let auth = link.auth(&self.http, password).await?;
+        let (client_id, client_name) = self.identity();
+        let auth = link
+            .auth(&self.http, password, &client_id, &client_name)
+            .await?;
         Ok((info, auth))
     }
 
@@ -1119,8 +1159,10 @@ mod naming_tests {
         let name = unique_local_name(&cfg, "Design-PC", "HP LaserJet Pro", 1);
         assert_eq!(name, "Design-PC-HP-LaserJet-Pro");
 
-        let mut printer = ClientPrinter::default();
-        printer.local_name = name.clone();
+        let printer = ClientPrinter {
+            local_name: name.clone(),
+            ..Default::default()
+        };
         cfg.client_printers.push(printer);
         assert_eq!(
             unique_local_name(&cfg, "Design-PC", "HP LaserJet Pro", 2),

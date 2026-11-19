@@ -24,6 +24,10 @@ pub struct InfoResponse {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuthRequest {
     pub password: String,
+    #[serde(default)]
+    pub device_id: String,
+    #[serde(default)]
+    pub device_name: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -35,6 +39,10 @@ pub struct AuthResponse {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PrinterTokenRequest {
     pub password: String,
+    #[serde(default)]
+    pub device_id: String,
+    #[serde(default)]
+    pub device_name: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
