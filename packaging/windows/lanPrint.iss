@@ -52,15 +52,17 @@ Name: "{group}\Uninstall lanPrint"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\lanPrint"; Filename: "{app}\lanPrint.exe"; Tasks: desktopicon
 
 [Registry]
-Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "lanPrint"; ValueData: """{app}\lanPrint.exe"" --tray"; Flags: uninsdeletevalue; Tasks: autostart
+; HKA resolves to HKLM in the default all-users install and to HKCU when the
+; user chooses a per-user install.
+Root: HKA; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "lanPrint"; ValueData: """{app}\lanPrint.exe"" --tray"; Flags: uninsdeletevalue; Tasks: autostart
 
 [Run]
 ; Allow inbound connections from clients and mDNS discovery. The rule is
 ; tied to lanPrint.exe so it keeps working after updates.
-Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""lanPrint"""; Flags: runhidden ignoreerrors; StatusMsg: "Updating the Windows Firewall rule..."
-Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall add rule name=""lanPrint"" dir=in action=allow program=""{app}\lanPrint.exe"" enable=yes profile=any"; Flags: runhidden ignoreerrors; StatusMsg: "Adding the Windows Firewall rule..."
+Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""lanPrint"""; Flags: runhidden; StatusMsg: "Updating the Windows Firewall rule..."
+Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall add rule name=""lanPrint"" dir=in action=allow program=""{app}\lanPrint.exe"" enable=yes profile=any"; Flags: runhidden; StatusMsg: "Adding the Windows Firewall rule..."
 Filename: "{app}\lanPrint.exe"; Description: "{cm:LaunchProgram,lanPrint}"; Flags: nowait postinstall skipifsilent
 
 [UninstallRun]
-Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""lanPrint"""; Flags: runhidden ignoreerrors; RunOnceId: "RemoveFirewallRule"
+Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""lanPrint"""; Flags: runhidden; RunOnceId: "RemoveFirewallRule"
 Filename: "{cmd}"; Parameters: "/C taskkill /IM lanPrint.exe /F >NUL 2>&1"; Flags: runhidden; RunOnceId: "StopLanPrint"
