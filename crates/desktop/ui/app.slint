@@ -618,15 +618,13 @@ component Select inherits Rectangle {
         vertical-alignment: center;
         overflow: elide;
     }
-    Text {
-        x: parent.width - 24px;
-        width: 16px;
-        height: parent.height;
-        text: "\u{25BE}";
-        color: Theme.muted;
-        font-size: 11px;
-        horizontal-alignment: center;
-        vertical-alignment: center;
+    Image {
+        x: parent.width - 26px;
+        y: (parent.height - 12px) / 2;
+        width: 12px;
+        height: 12px;
+        source: @image-url("assets/icons/chevron-down.svg");
+        colorize: Theme.muted;
     }
     pop := TouchArea {
         clicked => { list.show(); }
