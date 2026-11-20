@@ -12,6 +12,10 @@ use crate::error::{AppError, Result};
 
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
+fn wide(value: &str) -> Vec<u16> {
+    value.encode_utf16().chain(std::iter::once(0)).collect()
+}
+
 fn powershell(script: &str) -> Result<String> {
     let mut cmd = Command::new("powershell.exe");
     cmd.args([
@@ -415,24 +419,206 @@ fn print_raw(printer: &str, data: &[u8]) -> Result<()> {
     result
 }
 
-/// Install a local virtual queue backed by a TCP port that the desktop app
-/// listens on and forwards to the remote host.
-///
-/// When the host's driver is installed on this machine the queue uses it, so
-/// the Windows print dialog exposes the same duplex, colour, tray and finishing
-/// options as the host printer and the spooler emits native driver data. When
-/// the driver is missing the queue falls back to *Microsoft Print To PDF*, and
-/// the host renders the PDF with lanPrint's own pipeline.
-pub fn install_remote_printer(
-    local_name: &str,
-    display_name: &str,
-    driver: &str,
-    id: u32,
-    tcp_port: u16,
-    prefs: &PrinterPreferences,
-) -> Result<()> {
-    let port_name = format!("lanPrint-{tcp_port}");
-    let ipp_url = crate::ipp::http_uri(id);
+/// One printer operation handed to an elevated helper instance of lanPrint.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct PrinterJob {
+    pub local_name: String,
+    pub display_name: String,
+    pub driver: String,
+    pub id: u32,
+    pub tcp_port: u16,
+    pub preferences: PrinterPreferences,
+    #[serde(default)]
+    pub upgrade: bool,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+struct PrinterJobResult {
+    ok: bool,
+    #[serde(default)]
+    method: String,
+    #[serde(default)]
+    error: String,
+}
+
+fn is_elevated() -> bool {
+    use winapi::um::handleapi::CloseHandle;
+    use winapi::um::processthreadsapi::{GetCurrentProcess, OpenProcessToken};
+    use winapi::um::securitybaseapi::GetTokenInformation;
+    use winapi::um::winnt::{TokenElevation, TOKEN_ELEVATION, TOKEN_QUERY};
+    unsafe {
+        let mut token = std::ptr::null_mut();
+        if OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token) == 0 {
+            return false;
+        }
+        let mut elevation = TOKEN_ELEVATION { TokenIsElevated: 0 };
+        let mut size = 0u32;
+        let ok = GetTokenInformation(
+            token,
+            TokenElevation,
+            &mut elevation as *mut _ as *mut _,
+            std::mem::size_of::<TOKEN_ELEVATION>() as u32,
+            &mut size,
+        );
+        CloseHandle(token);
+        ok != 0 && elevation.TokenIsElevated != 0
+    }
+}
+
+/// Entry point for the elevated helper instance. Reads the job descriptions,
+/// applies them in order and writes the outcomes next to the job file.
+pub fn run_printer_job(job_path: Option<&String>, out_path: Option<&String>) -> i32 {
+    let (Some(job_path), Some(out_path)) = (job_path, out_path) else {
+        return 2;
+    };
+    let results = std::fs::read_to_string(job_path)
+        .map_err(|e| AppError::Platform(format!("cannot read printer job: {e}")))
+        .and_then(|raw| {
+            let raw = raw.trim_start_matches('\u{feff}');
+            serde_json::from_str::<Vec<PrinterJob>>(raw)
+                .map_err(|e| AppError::Platform(format!("invalid printer job: {e}")))
+        })
+        .map(|jobs| {
+            jobs.iter()
+                .map(|job| match run_job(job) {
+                    Ok(method) => PrinterJobResult {
+                        ok: true,
+                        method,
+                        error: String::new(),
+                    },
+                    Err(err) => PrinterJobResult {
+                        ok: false,
+                        method: String::new(),
+                        error: err.to_string(),
+                    },
+                })
+                .collect::<Vec<_>>()
+        });
+    match results {
+        Ok(payload) => {
+            let code = if payload.iter().all(|result| result.ok) {
+                0
+            } else {
+                2
+            };
+            if let Ok(json) = serde_json::to_string(&payload) {
+                let _ = std::fs::write(out_path, json);
+            }
+            code
+        }
+        Err(err) => {
+            let payload = vec![PrinterJobResult {
+                ok: false,
+                method: String::new(),
+                error: err.to_string(),
+            }];
+            if let Ok(json) = serde_json::to_string(&payload) {
+                let _ = std::fs::write(out_path, json);
+            }
+            2
+        }
+    }
+}
+
+fn apply_jobs(jobs: &[PrinterJob]) -> Vec<PrinterJobResult> {
+    if is_elevated() {
+        jobs.iter().map(apply_in_process).collect()
+    } else {
+        run_elevated_jobs(jobs)
+    }
+}
+
+fn apply_in_process(job: &PrinterJob) -> PrinterJobResult {
+    match run_job(job) {
+        Ok(method) => PrinterJobResult {
+            ok: true,
+            method,
+            error: String::new(),
+        },
+        Err(err) => PrinterJobResult {
+            ok: false,
+            method: String::new(),
+            error: err.to_string(),
+        },
+    }
+}
+
+fn run_job(job: &PrinterJob) -> Result<String> {
+    match install_with_ipp(job) {
+        Ok(method) => Ok(method),
+        Err(err) if job.upgrade => Err(err),
+        Err(err) => {
+            debug!(
+                "IPP install for {} failed: {err}; using a TCP queue",
+                job.local_name
+            );
+            install_with_tcp(job).map(|driver| format!("TCP/{driver}"))
+        }
+    }
+}
+
+/// Create the queue through Windows' native IPP stack. The spooler asks lanPrint
+/// for the host printer's real capabilities, so the print dialog exposes the
+/// same duplex, colour, tray and media options as the shared printer.
+fn install_with_ipp(job: &PrinterJob) -> Result<String> {
+    if !crate::ipp::available() {
+        return Err(AppError::Platform(
+            "lanPrint IPP endpoint is not ready".into(),
+        ));
+    }
+    let ipp_url = crate::ipp::http_uri(job.id);
+    let script = r#"
+$ErrorActionPreference = 'Stop'
+$name = '__LOCAL__'
+$ipp = '__IPP__'
+$paper = '__PAPER__'
+$color = __COLOR__
+$duplex = '__DUPLEX__'
+$upgrade = __UPGRADE__
+$oldPort = ''
+$oldDriver = ''
+if ($upgrade) {
+  $existing = Get-Printer -Name $name -ErrorAction SilentlyContinue
+  if ($existing -and $existing.PortName -like 'WSD-*') { 'IPP'; exit 0 }
+  if ($existing) { $oldPort = $existing.PortName; $oldDriver = $existing.DriverName }
+}
+if (Get-Printer -Name $name -ErrorAction SilentlyContinue) {
+  Remove-Printer -Name $name -ErrorAction SilentlyContinue
+  Start-Sleep -Milliseconds 400
+}
+try {
+  Add-Printer -Name $name -IppURL $ipp -ErrorAction Stop
+} catch {
+  if ($upgrade -and $oldPort -and $oldDriver) {
+    try { Add-Printer -Name $name -DriverName $oldDriver -PortName $oldPort -ErrorAction Stop } catch {}
+  }
+  throw
+}
+try {
+  Set-PrintConfiguration -PrinterName $name -PaperSize $paper -Color:$color -Duplexing $duplex -ErrorAction Stop
+} catch {}
+'IPP'
+"#
+    .replace("__LOCAL__", &ps_quote(&job.local_name))
+    .replace("__IPP__", &ps_quote(&ipp_url))
+    .replace("__PAPER__", &ps_quote(&job.preferences.paper))
+    .replace("__COLOR__", if job.preferences.color { "$true" } else { "$false" })
+    .replace("__DUPLEX__", duplex_setting(&job.preferences))
+    .replace("__UPGRADE__", if job.upgrade { "$true" } else { "$false" });
+    let output = powershell(&script)?;
+    if output.contains("IPP") {
+        Ok("IPP".into())
+    } else {
+        Err(AppError::Platform(
+            "Windows did not create an IPP queue".into(),
+        ))
+    }
+}
+
+/// Fallback queue: a raw TCP port served by lanPrint, using the host driver when
+/// it is installed or Microsoft Print To PDF otherwise.
+fn install_with_tcp(job: &PrinterJob) -> Result<String> {
+    let port_name = format!("lanPrint-{}", job.tcp_port);
     let script = r#"
 $ErrorActionPreference = 'Stop'
 $portName = '__PORT_NAME__'
@@ -442,8 +628,6 @@ $driver = '__DRIVER__'
 $paper = '__PAPER__'
 $color = __COLOR__
 $duplex = '__DUPLEX__'
-$ippUrl = '__IPP_URL__'
-$ippReady = __IPP_READY__
 try {
   Add-PrinterPort -Name $portName -PrinterHostAddress '127.0.0.1' -PortNumber $port -ErrorAction Stop
 } catch {
@@ -453,44 +637,24 @@ try {
 $installed = @()
 try { $installed = @(Get-PrinterDriver | Select-Object -ExpandProperty Name) } catch {}
 try { Remove-Printer -Name $localName -ErrorAction SilentlyContinue } catch {}
+if ($driver -and -not ($installed -contains $driver)) {
+  try { Add-PrinterDriver -Name $driver -ErrorAction Stop; $installed += $driver } catch {}
+}
+$candidates = @()
+if ($driver) { $candidates += $driver }
+$candidates += 'Microsoft Print To PDF'
+$candidates += 'Generic / Text Only'
 $added = $false
-$ippDriver = 'Microsoft IPP Class Driver'
-if ($ippReady -and ($installed -contains $ippDriver)) {
+foreach ($candidate in $candidates) {
+  if (-not ($installed -contains $candidate)) { continue }
   try {
-    Add-PrinterPort -Name $ippUrl -ErrorAction SilentlyContinue | Out-Null
-  } catch {}
-  try {
-    Add-Printer -Name $localName -DriverName $ippDriver -PortName $ippUrl -ErrorAction Stop
+    Add-Printer -Name $localName -DriverName $candidate -PortName $portName -ErrorAction Stop
     $added = $true
+    break
   } catch {}
-  if (-not $added) {
-    rundll32 printui.dll,PrintUIEntry /if /q /b "$localName" /f "$env:WINDIR\inf\ntprint.inf" /r "$ippUrl" /m "$ippDriver"
-    for ($i = 0; $i -lt 20; $i++) {
-      if (Get-Printer -Name $localName -ErrorAction SilentlyContinue) { $added = $true; break }
-      Start-Sleep -Milliseconds 500
-    }
-  }
 }
 if (-not $added) {
-  try { Remove-Printer -Name $localName -ErrorAction SilentlyContinue } catch {}
-  if ($driver -and -not ($installed -contains $driver)) {
-    try { Add-PrinterDriver -Name $driver -ErrorAction Stop; $installed += $driver } catch {}
-  }
-  $candidates = @()
-  if ($driver) { $candidates += $driver }
-  $candidates += 'Microsoft Print To PDF'
-  $candidates += 'Generic / Text Only'
-  foreach ($candidate in $candidates) {
-    if (-not ($installed -contains $candidate)) { continue }
-    try {
-      Add-Printer -Name $localName -DriverName $candidate -PortName $portName -ErrorAction Stop
-      $added = $true
-      break
-    } catch {}
-  }
-  if (-not $added) {
-    rundll32 printui.dll,PrintUIEntry /if /b "$localName" /f "$env:WINDIR\inf\ntprint.inf" /r "$portName" /m "Generic / Text Only"
-  }
+  rundll32 printui.dll,PrintUIEntry /if /b "$localName" /f "$env:WINDIR\inf\ntprint.inf" /r "$portName" /m "Generic / Text Only"
 }
 try {
   Set-PrintConfiguration -PrinterName $localName -PaperSize $paper -Color:$color -Duplexing $duplex -ErrorAction Stop
@@ -498,27 +662,197 @@ try {
 try { (Get-Printer -Name $localName -ErrorAction Stop).DriverName } catch { '' }
 "#
     .replace("__PORT_NAME__", &ps_quote(&port_name))
-    .replace("__PORT__", &tcp_port.to_string())
-    .replace("__LOCAL__", &ps_quote(local_name))
-    .replace("__DRIVER__", &ps_quote(driver))
-    .replace("__PAPER__", &ps_quote(&prefs.paper))
-    .replace("__COLOR__", if prefs.color { "$true" } else { "$false" })
-    .replace("__DUPLEX__", duplex_setting(prefs))
-    .replace("__IPP_URL__", &ps_quote(&ipp_url))
-    .replace(
-        "__IPP_READY__",
-        if crate::ipp::available() {
-            "$true"
-        } else {
-            "$false"
-        },
-    );
+    .replace("__PORT__", &job.tcp_port.to_string())
+    .replace("__LOCAL__", &ps_quote(&job.local_name))
+    .replace("__DRIVER__", &ps_quote(&job.driver))
+    .replace("__PAPER__", &ps_quote(&job.preferences.paper))
+    .replace("__COLOR__", if job.preferences.color { "$true" } else { "$false" })
+    .replace("__DUPLEX__", duplex_setting(&job.preferences));
     let output = powershell(&script)?;
-    let chosen = output.lines().last().unwrap_or_default().trim();
-    if chosen.contains("IPP Class Driver") {
-        debug!("installed Windows IPP queue {local_name} ({display_name})");
+    let chosen = output.lines().last().unwrap_or_default().trim().to_string();
+    if chosen.is_empty() {
+        Err(AppError::Platform("Windows did not create a queue".into()))
     } else {
-        warn!("installed Windows queue {local_name} with basic driver {chosen:?}");
+        Ok(chosen)
+    }
+}
+
+fn run_elevated_jobs(jobs: &[PrinterJob]) -> Vec<PrinterJobResult> {
+    use winapi::um::shellapi::ShellExecuteW;
+    use winapi::um::winuser::SW_HIDE;
+
+    let failed = |error: String| -> Vec<PrinterJobResult> {
+        jobs.iter()
+            .map(|_| PrinterJobResult {
+                ok: false,
+                method: String::new(),
+                error: error.clone(),
+            })
+            .collect()
+    };
+    let dir = std::env::temp_dir();
+    let stem = format!("lanprint-printer-{}", uuid::Uuid::new_v4());
+    let job_path = dir.join(format!("{stem}.json"));
+    let out_path = dir.join(format!("{stem}.out.json"));
+    let encoded = match serde_json::to_vec(jobs) {
+        Ok(encoded) => encoded,
+        Err(err) => return failed(err.to_string()),
+    };
+    if let Err(err) = std::fs::write(&job_path, encoded) {
+        return failed(format!("cannot prepare printer install: {err}"));
+    }
+    let exe = match std::env::current_exe() {
+        Ok(exe) => exe,
+        Err(err) => {
+            let _ = std::fs::remove_file(&job_path);
+            return failed(err.to_string());
+        }
+    };
+    let params = format!(
+        "--apply-printer \"{}\" \"{}\"",
+        job_path.display(),
+        out_path.display()
+    );
+    let verb = wide("runas");
+    let file = wide(&exe.display().to_string());
+    let params_w = wide(&params);
+    let launched = unsafe {
+        ShellExecuteW(
+            std::ptr::null_mut(),
+            verb.as_ptr(),
+            file.as_ptr(),
+            params_w.as_ptr(),
+            std::ptr::null(),
+            SW_HIDE,
+        )
+    } as isize;
+    if launched <= 32 {
+        let _ = std::fs::remove_file(&job_path);
+        return failed("administrator rights are required to add the printer".into());
+    }
+    let seconds = (60 * jobs.len().max(1) as u64).clamp(120, 600);
+    let deadline = Instant::now() + Duration::from_secs(seconds);
+    loop {
+        if let Ok(raw) = std::fs::read_to_string(&out_path) {
+            let _ = std::fs::remove_file(&out_path);
+            let _ = std::fs::remove_file(&job_path);
+            return match serde_json::from_str::<Vec<PrinterJobResult>>(&raw) {
+                Ok(results) if results.len() == jobs.len() => results,
+                Ok(results) => {
+                    let mut results = results;
+                    results.resize_with(jobs.len(), || PrinterJobResult {
+                        ok: false,
+                        method: String::new(),
+                        error: "printer helper returned an incomplete result".into(),
+                    });
+                    results
+                }
+                Err(err) => failed(format!("invalid printer helper output: {err}")),
+            };
+        }
+        if Instant::now() > deadline {
+            let _ = std::fs::remove_file(&job_path);
+            return failed("printer helper did not finish in time".into());
+        }
+        std::thread::sleep(Duration::from_millis(250));
+    }
+}
+
+/// Install a client queue. Uses the native IPP stack (administrator rights are
+/// requested once) so the Windows print dialog shows the host printer's duplex,
+/// colour and finishing options; falls back to a TCP queue only when IPP is
+/// unavailable.
+pub fn install_remote_printer(
+    local_name: &str,
+    display_name: &str,
+    driver: &str,
+    id: u32,
+    tcp_port: u16,
+    prefs: &PrinterPreferences,
+) -> Result<()> {
+    let job = PrinterJob {
+        local_name: local_name.to_string(),
+        display_name: display_name.to_string(),
+        driver: driver.to_string(),
+        id,
+        tcp_port,
+        preferences: prefs.clone(),
+        upgrade: false,
+    };
+    let result = apply_jobs(std::slice::from_ref(&job))
+        .pop()
+        .unwrap_or_else(|| PrinterJobResult {
+            ok: false,
+            method: String::new(),
+            error: "printer helper returned no result".into(),
+        });
+    if result.ok {
+        debug!(
+            "installed Windows queue {local_name} ({display_name}) via {}",
+            result.method
+        );
+        return Ok(());
+    }
+    // Without administrator approval the IPP queue cannot be created. Keep the
+    // printer usable with the basic TCP path instead of failing the whole add.
+    if !is_elevated() {
+        debug!(
+            "IPP install for {local_name} failed ({}); using a TCP queue",
+            result.error
+        );
+        if let Ok(method) = run_job(&job) {
+            debug!("installed Windows queue {local_name} via {method}");
+            return Ok(());
+        }
+    }
+    Err(AppError::Platform(if result.error.is_empty() {
+        "printer install failed".into()
+    } else {
+        result.error
+    }))
+}
+
+/// Whether the queue still uses an older TCP port instead of the native IPP
+/// stack. IPP queues are exposed through a WSD port by the IPP class driver.
+pub fn queue_needs_upgrade(local_name: &str) -> bool {
+    let script = format!(
+        "$p = Get-Printer -Name '{}' -ErrorAction SilentlyContinue; if ($p -and $p.PortName -notlike 'WSD-*') {{ 'yes' }} else {{ 'no' }}",
+        ps_quote(local_name)
+    );
+    powershell(&script)
+        .map(|output| output.contains("yes"))
+        .unwrap_or(false)
+}
+
+/// Move existing queues to the native IPP stack with a single elevation
+/// prompt. A failed upgrade leaves the previous queue in place.
+pub fn upgrade_ipp_queues(printers: &[(String, u32, PrinterPreferences)]) -> Result<()> {
+    if printers.is_empty() || !crate::ipp::available() {
+        return Ok(());
+    }
+    let jobs: Vec<PrinterJob> = printers
+        .iter()
+        .map(|(local_name, id, prefs)| PrinterJob {
+            local_name: local_name.clone(),
+            display_name: local_name.clone(),
+            driver: String::new(),
+            id: *id,
+            tcp_port: 19_100u16.saturating_add(*id as u16 % 800),
+            preferences: prefs.clone(),
+            upgrade: true,
+        })
+        .collect();
+    let results = apply_jobs(&jobs);
+    for (job, result) in jobs.iter().zip(results) {
+        if result.ok {
+            debug!("queue {} upgraded via {}", job.local_name, result.method);
+            continue;
+        }
+        return Err(AppError::Platform(if result.error.is_empty() {
+            format!("could not repair queue {}", job.local_name)
+        } else {
+            result.error
+        }));
     }
     Ok(())
 }
@@ -566,30 +900,6 @@ pub fn launch_update(path: &Path) -> Result<()> {
         .spawn()
         .map_err(|e| AppError::Platform(format!("cannot start update: {e}")))?;
     Ok(())
-}
-
-/// Move an existing queue to the local IPP endpoint so the Windows print
-/// dialog adopts the host printer's real options.
-pub fn upgrade_ipp_queue(local_name: &str, id: u32) -> Result<()> {
-    if !crate::ipp::available() {
-        return Ok(());
-    }
-    let ipp_url = crate::ipp::http_uri(id);
-    let script = r#"
-$ErrorActionPreference = 'Stop'
-$name = '__NAME__'
-$ippUrl = '__IPP__'
-try { $printer = Get-Printer -Name $name -ErrorAction Stop } catch { exit 0 }
-if ($printer.PortName -like '*52336*') { exit 0 }
-$installed = @()
-try { $installed = @(Get-PrinterDriver | Select-Object -ExpandProperty Name) } catch {}
-if (-not ($installed -contains 'Microsoft IPP Class Driver')) { exit 0 }
-try { Add-PrinterPort -Name $ippUrl -ErrorAction SilentlyContinue | Out-Null } catch {}
-try { Set-Printer -Name $name -DriverName 'Microsoft IPP Class Driver' -PortName $ippUrl -ErrorAction Stop } catch { exit 0 }
-"#
-    .replace("__NAME__", &ps_quote(local_name))
-    .replace("__IPP__", &ps_quote(&ipp_url));
-    powershell(&script).map(|_| ())
 }
 
 pub fn open_path(path: &Path) -> Result<()> {

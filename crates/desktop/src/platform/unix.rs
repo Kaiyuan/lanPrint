@@ -509,6 +509,17 @@ pub fn launch_update(path: &Path) -> Result<()> {
     open::that(path).map_err(|e| AppError::Platform(format!("cannot open update: {e}")))
 }
 
+/// Whether the queue is still bound to an older backend instead of the local
+/// IPP endpoint.
+pub fn queue_needs_upgrade(local_name: &str, id: u32) -> bool {
+    let Ok(current) = Command::new("lpstat").args(["-v", local_name]).output() else {
+        return false;
+    };
+    let device = String::from_utf8_lossy(&current.stdout);
+    !(device.contains(&format!(":{}", crate::ipp::IPP_PORT))
+        && device.contains(&format!("/ipp/{id}")))
+}
+
 /// Point an existing CUPS queue at the local IPP endpoint so CUPS regenerates
 /// its PPD from the host printer's real capabilities.
 pub fn upgrade_ipp_queue(local_name: &str, id: u32) -> Result<()> {

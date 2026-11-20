@@ -110,14 +110,15 @@ impl App {
             .cloned()
     }
 
-    /// Ensure existing client queues use the IPP endpoint. Runs silently on
-    /// Windows; on macOS/Linux it may request administrator rights, so the UI
-    /// calls it only after an explicit user action.
+    /// Ensure existing client queues use the IPP endpoint. Only queues that
+    /// still use the old TCP backend are repaired, and Windows handles all of
+    /// them in one elevated helper run, so the user sees one prompt at most.
     pub async fn upgrade_client_queues(self: &Arc<Self>, force: bool) {
-        if !force && !cfg!(windows) && std::env::args().any(|arg| arg == "--tray") {
+        if !force && std::env::args().any(|arg| arg == "--tray") {
             return;
         }
         let printers = self.config.read().client_printers.clone();
+        let mut pending = Vec::new();
         for printer in printers {
             if upgraded_queues()
                 .lock()
@@ -128,17 +129,31 @@ impl App {
             }
             let name = printer.local_name.clone();
             let id = printer.id;
-            match tokio::task::spawn_blocking(move || platform::upgrade_ipp_queue(&name, id)).await
-            {
-                Ok(Ok(())) => {
-                    if let Ok(mut done) = upgraded_queues().lock() {
-                        done.insert(id);
-                    }
-                    debug!("queue {} uses IPP", printer.local_name);
+            let needs =
+                tokio::task::spawn_blocking(move || platform::queue_needs_upgrade(&name, id))
+                    .await
+                    .unwrap_or(false);
+            if !needs {
+                if let Ok(mut done) = upgraded_queues().lock() {
+                    done.insert(id);
                 }
-                Ok(Err(err)) => debug!("IPP upgrade for {} failed: {err}", printer.local_name),
-                Err(err) => debug!("IPP upgrade task for {} failed: {err}", printer.local_name),
+                continue;
             }
+            pending.push((printer.local_name, id, printer.preferences));
+        }
+        if pending.is_empty() {
+            return;
+        }
+        let ids: Vec<u32> = pending.iter().map(|printer| printer.1).collect();
+        match tokio::task::spawn_blocking(move || platform::upgrade_ipp_queues(&pending)).await {
+            Ok(Ok(())) => {
+                if let Ok(mut done) = upgraded_queues().lock() {
+                    done.extend(ids);
+                }
+                debug!("client queues now use the IPP endpoint");
+            }
+            Ok(Err(err)) => debug!("IPP queue repair failed: {err}"),
+            Err(err) => debug!("IPP queue repair task failed: {err}"),
         }
     }
 
@@ -302,7 +317,7 @@ impl App {
             }
         });
 
-        if cfg!(windows) || !std::env::args().any(|arg| arg == "--tray") {
+        if !std::env::args().any(|arg| arg == "--tray") {
             let upgrader = self.clone();
             tokio::spawn(async move {
                 tokio::time::sleep(std::time::Duration::from_secs(1)).await;
@@ -908,15 +923,31 @@ impl App {
             self.forwarders.lock().await.insert(id, forwarder);
         }
 
-        if let Err(err) = platform::install_remote_printer(
-            &local_name,
-            &display,
-            &queue_driver,
-            id,
-            tcp_port,
-            &uri,
-            &prefs,
-        ) {
+        let install = {
+            let local_name = local_name.clone();
+            let display = display.clone();
+            let queue_driver = queue_driver.clone();
+            let prefs = prefs.clone();
+            tokio::task::spawn_blocking(move || {
+                platform::install_remote_printer(
+                    &local_name,
+                    &display,
+                    &queue_driver,
+                    id,
+                    tcp_port,
+                    &uri,
+                    &prefs,
+                )
+            })
+            .await
+        };
+        let install = match install {
+            Ok(result) => result,
+            Err(err) => Err(crate::error::AppError::Platform(format!(
+                "printer install task failed: {err}"
+            ))),
+        };
+        if let Err(err) = install {
             #[cfg(windows)]
             {
                 if let Some(handle) = self.forwarders.lock().await.remove(&id) {

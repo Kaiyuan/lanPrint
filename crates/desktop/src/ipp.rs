@@ -2,8 +2,11 @@
 //!
 //! The server advertises the host printer's real capabilities (media, sides,
 //! colour, trays, resolution) so CUPS and the Windows IPP class driver build a
-//! queue that matches the shared printer. Print data is forwarded to the host
-//! with the same PDF pipeline used by the in-app test page.
+//! queue that matches the shared printer. CUPS exposes every media size and
+//! tray; Windows' class driver shows duplex, colour, copies, resolution and the
+//! default paper size, but keeps its own short media list. Print data is
+//! forwarded to the host with the same PDF pipeline used by the in-app test
+//! page.
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -696,18 +699,140 @@ fn pwg_media(paper: &str) -> String {
         "A4" => "iso_a4_210x297mm".into(),
         "A3" => "iso_a3_297x420mm".into(),
         "A5" => "iso_a5_148x210mm".into(),
+        "A6" => "iso_a6_105x148mm".into(),
         "B5" => "iso_b5_176x250mm".into(),
         "B4" => "iso_b4_250x353mm".into(),
         "LETTER" => "na_letter_8.5x11in".into(),
         "LEGAL" => "na_legal_8.5x14in".into(),
         "EXECUTIVE" => "na_executive_7.25x10.5in".into(),
         "TABLOID" => "na_ledger_11x17in".into(),
+        "FOLIO" => "na_folio_8.5x13in".into(),
         _ => normalize_source(paper).replace('-', "_"),
+    }
+}
+
+/// Paper dimensions in hundredths of a millimetre, as required by
+/// `media-size-supported`.
+fn media_dimensions(paper: &str) -> Option<(i32, i32)> {
+    let size = match paper.trim().to_ascii_uppercase().as_str() {
+        "A3" => (29700, 42000),
+        "A4" => (21000, 29700),
+        "A5" => (14800, 21000),
+        "A6" => (10500, 14800),
+        "B4" => (25000, 35300),
+        "B5" => (17600, 25000),
+        "LETTER" => (21590, 27940),
+        "LEGAL" => (21590, 35560),
+        "EXECUTIVE" => (18415, 26670),
+        "TABLOID" => (27940, 43180),
+        "FOLIO" => (21590, 33020),
+        _ => return None,
+    };
+    Some(size)
+}
+
+/// Encode a `media-size-supported` collection (IPP collection syntax).
+fn media_size(paper: &str) -> Vec<Attribute> {
+    let Some((x, y)) = media_dimensions(paper) else {
+        return Vec::new();
+    };
+    let mut attrs = vec![collection_start("media-size-supported")];
+    attrs.extend(collection_member_name("x-dimension"));
+    attrs.push(collection_integer(x));
+    attrs.extend(collection_member_name("y-dimension"));
+    attrs.push(collection_integer(y));
+    attrs.push(collection_end());
+    attrs
+}
+
+/// Encode a `media-col-database` / `media-col-default` entry. CUPS and macOS
+/// build their page-size and tray lists from these collections; Windows' IPP
+/// class driver only exposes the default media size in its print dialog.
+fn media_col(name: &str, paper: &str) -> Vec<Attribute> {
+    let Some((x, y)) = media_dimensions(paper) else {
+        return Vec::new();
+    };
+    let mut attrs = vec![collection_start(name)];
+    attrs.extend(collection_member_name("media-size"));
+    attrs.push(collection_start(""));
+    attrs.extend(collection_member_name("x-dimension"));
+    attrs.push(collection_integer(x));
+    attrs.extend(collection_member_name("y-dimension"));
+    attrs.push(collection_integer(y));
+    attrs.push(collection_end());
+    attrs.push(collection_end());
+    attrs
+}
+
+fn collection_start(name: &str) -> Attribute {
+    Attribute {
+        name: name.into(),
+        tag: 0x34,
+        value: Vec::new(),
+    }
+}
+
+fn collection_member_name(name: &str) -> Vec<Attribute> {
+    vec![Attribute {
+        name: String::new(),
+        tag: 0x4A,
+        value: name.as_bytes().to_vec(),
+    }]
+}
+
+fn collection_integer(value: i32) -> Attribute {
+    Attribute {
+        name: String::new(),
+        tag: TAG_INTEGER,
+        value: value.to_be_bytes().to_vec(),
+    }
+}
+
+fn collection_end() -> Attribute {
+    Attribute {
+        name: String::new(),
+        tag: 0x37,
+        value: Vec::new(),
     }
 }
 
 fn printer_attributes(client: &ClientPrinter) -> Vec<Attribute> {
     let caps = &client.capabilities;
+    let mut duplex_modes: Vec<&str> = Vec::new();
+    for mode in &caps.duplex_modes {
+        if mode.eq_ignore_ascii_case("short_edge") {
+            duplex_modes.push("two-sided-short-edge");
+        } else if mode.eq_ignore_ascii_case("long_edge") {
+            duplex_modes.push("two-sided-long-edge");
+        }
+    }
+    if duplex_modes.is_empty() && caps.duplex {
+        duplex_modes.push("two-sided-long-edge");
+        duplex_modes.push("two-sided-short-edge");
+    }
+    let preference = client.preferences.duplex.clone();
+    let default_sides = match preference {
+        DuplexMode::Simplex => "one-sided",
+        mode => {
+            let preferred = if mode == DuplexMode::ShortEdge {
+                "two-sided-short-edge"
+            } else {
+                "two-sided-long-edge"
+            };
+            let fallback = if preferred == "two-sided-short-edge" {
+                "two-sided-long-edge"
+            } else {
+                "two-sided-short-edge"
+            };
+            if duplex_modes.contains(&preferred) {
+                preferred
+            } else if duplex_modes.contains(&fallback) {
+                fallback
+            } else {
+                "one-sided"
+            }
+        }
+    };
     let mut attrs = vec![
         uri("printer-uri-supported", &cups_uri(client.id)),
         keyword("uri-security-supported", "none"),
@@ -737,6 +862,25 @@ fn printer_attributes(client: &ClientPrinter) -> Vec<Attribute> {
         language("generated-natural-language-supported", "en"),
         mime("document-format-default", "application/pdf"),
         mime("document-format-supported", "application/pdf"),
+        mime("document-format-preferred", "application/pdf"),
+        text(
+            "printer-device-id",
+            &format!(
+                "MFG:lanPrint;MDL:{};CMD:PDF;",
+                if caps.make_model.is_empty() {
+                    &client.display_name
+                } else {
+                    &caps.make_model
+                }
+            ),
+        ),
+        enum_attr("print-quality-default", 4),
+        enum_attr("print-quality-supported", 4),
+        enum_attr("orientation-requested-default", 3),
+        enum_attr("orientation-requested-supported", 3),
+        enum_attr("orientation-requested-supported", 4),
+        enum_attr("orientation-requested-supported", 5),
+        enum_attr("orientation-requested-supported", 6),
         boolean("color-supported", caps.color),
         keyword(
             "print-color-mode-default",
@@ -746,15 +890,7 @@ fn printer_attributes(client: &ClientPrinter) -> Vec<Attribute> {
                 "monochrome"
             },
         ),
-        keyword(
-            "print-color-mode-supported",
-            if caps.color { "color" } else { "monochrome" },
-        ),
-        keyword(
-            "sides-default",
-            sides_keyword(client.preferences.duplex.clone()),
-        ),
-        keyword("sides-supported", "one-sided"),
+        keyword("sides-default", default_sides),
         keyword(
             "media-default",
             &pwg_media(if client.preferences.paper.is_empty() {
@@ -771,6 +907,8 @@ fn printer_attributes(client: &ClientPrinter) -> Vec<Attribute> {
         keyword("job-creation-attributes-supported", "media-source"),
         keyword("job-creation-attributes-supported", "printer-resolution"),
         keyword("job-creation-attributes-supported", "job-name"),
+        keyword("job-creation-attributes-supported", "print-quality"),
+        keyword("job-creation-attributes-supported", "orientation-requested"),
         enum_attr("operations-supported", OP_PRINT_JOB as i32),
         enum_attr("operations-supported", OP_VALIDATE_JOB as i32),
         enum_attr("operations-supported", OP_CREATE_JOB as i32),
@@ -782,17 +920,34 @@ fn printer_attributes(client: &ClientPrinter) -> Vec<Attribute> {
         enum_attr("operations-supported", OP_IDENTIFY_PRINTER as i32),
     ];
     if caps.color {
+        attrs.push(keyword("print-color-mode-supported", "color"));
+        attrs.push(keyword("print-color-mode-supported", "monochrome"));
+    } else {
         attrs.push(keyword("print-color-mode-supported", "monochrome"));
     }
-    if caps.duplex {
-        attrs.push(keyword("sides-supported", "two-sided-long-edge"));
-        attrs.push(keyword("sides-supported", "two-sided-short-edge"));
+    attrs.push(keyword("sides-supported", "one-sided"));
+    for side in &duplex_modes {
+        attrs.push(keyword("sides-supported", side));
     }
     if !caps.papers.is_empty() {
         for paper in &caps.papers {
             attrs.push(keyword("media-supported", &pwg_media(paper)));
         }
+        for paper in &caps.papers {
+            attrs.extend(media_size(paper));
+        }
+        for paper in &caps.papers {
+            attrs.extend(media_col("media-col-database", paper));
+        }
     }
+    attrs.extend(media_col(
+        "media-col-default",
+        if client.preferences.paper.is_empty() {
+            "A4"
+        } else {
+            &client.preferences.paper
+        },
+    ));
     if !caps.sources.is_empty() {
         attrs.push(keyword(
             "media-source-default",
@@ -831,14 +986,6 @@ fn printer_attributes(client: &ClientPrinter) -> Vec<Attribute> {
     attrs
 }
 
-fn sides_keyword(duplex: DuplexMode) -> &'static str {
-    match duplex {
-        DuplexMode::LongEdge => "two-sided-long-edge",
-        DuplexMode::ShortEdge => "two-sided-short-edge",
-        DuplexMode::Simplex => "one-sided",
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -870,5 +1017,70 @@ mod tests {
     fn maps_paper_names() {
         assert_eq!(pwg_media("A4"), "iso_a4_210x297mm");
         assert_eq!(pwg_media("Letter"), "na_letter_8.5x11in");
+        assert_eq!(pwg_media("A6"), "iso_a6_105x148mm");
+    }
+
+    fn client_with(duplex_modes: &[&str]) -> ClientPrinter {
+        let mut client = ClientPrinter::default();
+        client.id = 7;
+        client.local_name = "lanPrint-Test".into();
+        client.display_name = "Test".into();
+        client.capabilities.duplex = !duplex_modes.is_empty();
+        client.capabilities.color = true;
+        client.capabilities.duplex_modes =
+            duplex_modes.iter().map(|mode| mode.to_string()).collect();
+        client.capabilities.papers = vec!["A4".into(), "A3".into()];
+        client.capabilities.sources = vec!["Tray 1".into()];
+        client.preferences.duplex = DuplexMode::ShortEdge;
+        client
+    }
+
+    fn values(attrs: &[Attribute], name: &str) -> Vec<String> {
+        attrs
+            .iter()
+            .filter(|attribute| attribute.name == name)
+            .map(|attribute| String::from_utf8_lossy(&attribute.value).into_owned())
+            .collect()
+    }
+
+    #[test]
+    fn limits_sides_to_host_modes() {
+        let attrs = printer_attributes(&client_with(&["long_edge"]));
+        assert_eq!(
+            values(&attrs, "sides-supported"),
+            vec!["one-sided", "two-sided-long-edge"]
+        );
+        // Short edge is not available on this host, so the default degrades.
+        assert_eq!(values(&attrs, "sides-default"), vec!["two-sided-long-edge"]);
+    }
+
+    #[test]
+    fn advertises_both_duplex_modes() {
+        let attrs = printer_attributes(&client_with(&["long_edge", "short_edge"]));
+        assert_eq!(
+            values(&attrs, "sides-supported"),
+            vec!["one-sided", "two-sided-long-edge", "two-sided-short-edge"]
+        );
+        assert_eq!(
+            values(&attrs, "sides-default"),
+            vec!["two-sided-short-edge"]
+        );
+    }
+
+    #[test]
+    fn keeps_multi_value_attributes_together() {
+        let attrs = printer_attributes(&client_with(&["long_edge"]));
+        let mut seen: Vec<&str> = Vec::new();
+        for attribute in attrs.iter().filter(|attribute| !attribute.name.is_empty()) {
+            if seen.last() == Some(&attribute.name.as_str()) {
+                continue;
+            }
+            assert!(
+                !seen.contains(&attribute.name.as_str()),
+                "{} is not contiguous",
+                attribute.name
+            );
+            seen.push(&attribute.name);
+        }
     }
 }

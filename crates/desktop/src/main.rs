@@ -31,6 +31,13 @@ fn main() {
         println!("lanPrint {}", lanprint_core::VERSION);
         return;
     }
+    #[cfg(windows)]
+    if let Some(pos) = args.iter().position(|a| a == "--apply-printer") {
+        std::process::exit(platform::run_printer_job(
+            args.get(pos + 1),
+            args.get(pos + 2),
+        ));
+    }
     let is_cups = args.iter().any(|a| a == "--cups-backend") || args[0].contains("/cups/backend/");
     if is_cups {
         cups::run();
@@ -46,6 +53,28 @@ fn main() {
         }
     };
     init_logging(&config);
+
+    // Diagnostics: print what the local queues report to the print dialog.
+    if let Some(pos) = args.iter().position(|a| a == "--dump-caps") {
+        let filter = args.get(pos + 1).cloned();
+        match platform::list_printers() {
+            Ok(printers) => {
+                for printer in printers {
+                    if let Some(needle) = &filter {
+                        if !printer.name.eq_ignore_ascii_case(needle) {
+                            continue;
+                        }
+                    }
+                    match serde_json::to_string_pretty(&printer) {
+                        Ok(json) => println!("{json}"),
+                        Err(err) => eprintln!("cannot encode printer: {err}"),
+                    }
+                }
+            }
+            Err(err) => eprintln!("cannot list printers: {err}"),
+        }
+        return;
+    }
 
     // Small automation helpers used by installers, tests and headless setups.
     if let Some(pos) = args.iter().position(|a| a == "--set-password") {

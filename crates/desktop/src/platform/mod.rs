@@ -81,16 +81,40 @@ pub fn launch_update(path: &Path) -> Result<()> {
     imp::launch_update(path)
 }
 
-/// Move an existing client queue to the local IPP endpoint.
-pub fn upgrade_ipp_queue(local_name: &str, id: u32) -> Result<()> {
+/// Move existing client queues to the local IPP endpoint. Windows batches them
+/// into one elevated helper run so the user is asked for administrator rights
+/// at most once.
+pub fn upgrade_ipp_queues(printers: &[(String, u32, PrinterPreferences)]) -> Result<()> {
     #[cfg(unix)]
     {
-        imp::upgrade_ipp_queue(local_name, id)
+        for (local_name, id, _) in printers {
+            imp::upgrade_ipp_queue(local_name, *id)?;
+        }
+        Ok(())
     }
     #[cfg(windows)]
     {
-        imp::upgrade_ipp_queue(local_name, id)
+        imp::upgrade_ipp_queues(printers)
     }
+}
+
+/// Whether an existing queue is still on the pre-IPP code path.
+pub fn queue_needs_upgrade(local_name: &str, id: u32) -> bool {
+    #[cfg(unix)]
+    {
+        imp::queue_needs_upgrade(local_name, id)
+    }
+    #[cfg(windows)]
+    {
+        let _ = id;
+        imp::queue_needs_upgrade(local_name)
+    }
+}
+
+/// Run the elevated printer helper instance (Windows only).
+#[cfg(windows)]
+pub fn run_printer_job(job: Option<&String>, out: Option<&String>) -> i32 {
+    imp::run_printer_job(job, out)
 }
 
 /// Update the local queue defaults so the system print dialog starts from the
