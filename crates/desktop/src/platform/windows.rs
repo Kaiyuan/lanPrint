@@ -430,6 +430,10 @@ pub struct PrinterJob {
     pub preferences: PrinterPreferences,
     #[serde(default)]
     pub upgrade: bool,
+    /// Host features injected into the generated queue files after an IPP
+    /// queue has been created.
+    #[serde(default)]
+    pub capabilities: Option<super::windows_caps::QueueCaps>,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -544,17 +548,43 @@ fn apply_in_process(job: &PrinterJob) -> PrinterJobResult {
 }
 
 fn run_job(job: &PrinterJob) -> Result<String> {
-    match install_with_ipp(job) {
-        Ok(method) => Ok(method),
-        Err(err) if job.upgrade => Err(err),
+    let method = match install_with_ipp(job) {
+        Ok(method) => method,
+        Err(err) if job.upgrade => return Err(err),
         Err(err) => {
             debug!(
                 "IPP install for {} failed: {err}; using a TCP queue",
                 job.local_name
             );
-            install_with_tcp(job).map(|driver| format!("TCP/{driver}"))
+            return install_with_tcp(job).map(|driver| format!("TCP/{driver}"));
+        }
+    };
+    if method == "IPP" {
+        if let Some(capabilities) = job.capabilities.as_ref() {
+            match super::windows_caps::apply(
+                &job.local_name,
+                capabilities,
+                &job.preferences.paper,
+            ) {
+                Ok(()) => {
+                    // The queue now knows the host's media sizes, so the
+                    // preferred paper, colour mode and duplex mode can be
+                    // stored as queue defaults.
+                    if let Err(err) = apply_printer_preferences(&job.local_name, &job.preferences)
+                    {
+                        debug!("could not apply queue defaults for {}: {err}", job.local_name);
+                    }
+                }
+                Err(err) => {
+                    debug!(
+                        "capability injection for {} skipped: {err}",
+                        job.local_name
+                    );
+                }
+            }
         }
     }
+    Ok(method)
 }
 
 /// Create the queue through Windows' native IPP stack. The spooler asks lanPrint
@@ -769,6 +799,7 @@ pub fn install_remote_printer(
     id: u32,
     tcp_port: u16,
     prefs: &PrinterPreferences,
+    capabilities: &PrinterCapabilities,
 ) -> Result<()> {
     let job = PrinterJob {
         local_name: local_name.to_string(),
@@ -778,6 +809,9 @@ pub fn install_remote_printer(
         tcp_port,
         preferences: prefs.clone(),
         upgrade: false,
+        capabilities: Some(super::windows_caps::QueueCaps::from_capabilities(
+            capabilities,
+        )),
     };
     let result = apply_jobs(std::slice::from_ref(&job))
         .pop()
@@ -813,26 +847,45 @@ pub fn install_remote_printer(
 }
 
 /// Whether the queue still uses an older TCP port instead of the native IPP
-/// stack. IPP queues are exposed through a WSD port by the IPP class driver.
-pub fn queue_needs_upgrade(local_name: &str) -> bool {
+/// stack, or has not had the host's current features injected yet. IPP queues
+/// are exposed through a WSD port by the IPP class driver.
+pub fn queue_needs_upgrade(local_name: &str, capabilities: &PrinterCapabilities) -> bool {
     let script = format!(
         "$p = Get-Printer -Name '{}' -ErrorAction SilentlyContinue; if ($p -and $p.PortName -notlike 'WSD-*') {{ 'yes' }} else {{ 'no' }}",
         ps_quote(local_name)
     );
-    powershell(&script)
+    let is_tcp = powershell(&script)
         .map(|output| output.contains("yes"))
-        .unwrap_or(false)
+        .unwrap_or(false);
+    if is_tcp {
+        return true;
+    }
+    if !super::windows_caps::can_inject(local_name) {
+        // A queue without generated class-driver files (a different driver, or
+        // files already cleaned up by Windows) cannot carry injected features.
+        return false;
+    }
+    let expected = super::windows_caps::QueueCaps::from_capabilities(capabilities).signature();
+    super::windows_caps::installed_signature(local_name).as_deref() != Some(expected.as_str())
 }
 
-/// Move existing queues to the native IPP stack with a single elevation
-/// prompt. A failed upgrade leaves the previous queue in place.
-pub fn upgrade_ipp_queues(printers: &[(String, u32, PrinterPreferences)]) -> Result<()> {
+/// Move existing queues to the native IPP stack and refresh their injected
+/// capabilities with a single elevation prompt. A failed upgrade leaves the
+/// previous queue in place.
+pub fn upgrade_ipp_queues(
+    printers: &[(
+        String,
+        u32,
+        PrinterPreferences,
+        PrinterCapabilities,
+    )],
+) -> Result<()> {
     if printers.is_empty() || !crate::ipp::available() {
         return Ok(());
     }
     let jobs: Vec<PrinterJob> = printers
         .iter()
-        .map(|(local_name, id, prefs)| PrinterJob {
+        .map(|(local_name, id, prefs, capabilities)| PrinterJob {
             local_name: local_name.clone(),
             display_name: local_name.clone(),
             driver: String::new(),
@@ -840,6 +893,9 @@ pub fn upgrade_ipp_queues(printers: &[(String, u32, PrinterPreferences)]) -> Res
             tcp_port: 19_100u16.saturating_add(*id as u16 % 800),
             preferences: prefs.clone(),
             upgrade: true,
+            capabilities: Some(super::windows_caps::QueueCaps::from_capabilities(
+                capabilities,
+            )),
         })
         .collect();
     let results = apply_jobs(&jobs);

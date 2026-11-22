@@ -643,6 +643,7 @@ fn prefs_from_request(request: &IppRequest, client: &ClientPrinter) -> PrinterPr
 }
 
 fn media_to_friendly(media: &str, caps: &PrinterCapabilities) -> String {
+    let media = media.trim();
     if let Some(paper) = caps
         .papers
         .iter()
@@ -650,27 +651,18 @@ fn media_to_friendly(media: &str, caps: &PrinterCapabilities) -> String {
     {
         return paper.clone();
     }
-    if media.starts_with("iso_a4") {
-        "A4".into()
-    } else if media.starts_with("iso_a3") {
-        "A3".into()
-    } else if media.starts_with("iso_a5") {
-        "A5".into()
-    } else if media.starts_with("iso_b5") {
-        "B5".into()
-    } else if media.starts_with("iso_b4") {
-        "B4".into()
-    } else if media.starts_with("na_letter") {
-        "Letter".into()
-    } else if media.starts_with("na_legal") {
-        "Legal".into()
-    } else if media.starts_with("na_executive") {
-        "Executive".into()
-    } else if media.starts_with("na_ledger") {
-        "Tabloid".into()
-    } else {
-        media.to_string()
+    if let Some(size) = crate::media::MEDIA.iter().find(|size| {
+        let prefix = size
+            .pwg
+            .split('_')
+            .take(2)
+            .collect::<Vec<_>>()
+            .join("_");
+        media.to_ascii_lowercase().starts_with(&prefix)
+    }) {
+        return size.name.to_string();
     }
+    media.to_string()
 }
 
 fn source_to_friendly(source: &str, caps: &PrinterCapabilities) -> String {
@@ -694,41 +686,13 @@ fn normalize_source(value: &str) -> String {
 }
 
 fn pwg_media(paper: &str) -> String {
-    let upper = paper.trim().to_ascii_uppercase();
-    match upper.as_str() {
-        "A4" => "iso_a4_210x297mm".into(),
-        "A3" => "iso_a3_297x420mm".into(),
-        "A5" => "iso_a5_148x210mm".into(),
-        "A6" => "iso_a6_105x148mm".into(),
-        "B5" => "iso_b5_176x250mm".into(),
-        "B4" => "iso_b4_250x353mm".into(),
-        "LETTER" => "na_letter_8.5x11in".into(),
-        "LEGAL" => "na_legal_8.5x14in".into(),
-        "EXECUTIVE" => "na_executive_7.25x10.5in".into(),
-        "TABLOID" => "na_ledger_11x17in".into(),
-        "FOLIO" => "na_folio_8.5x13in".into(),
-        _ => normalize_source(paper).replace('-', "_"),
-    }
+    crate::media::pwg_media(paper)
 }
 
 /// Paper dimensions in hundredths of a millimetre, as required by
 /// `media-size-supported`.
 fn media_dimensions(paper: &str) -> Option<(i32, i32)> {
-    let size = match paper.trim().to_ascii_uppercase().as_str() {
-        "A3" => (29700, 42000),
-        "A4" => (21000, 29700),
-        "A5" => (14800, 21000),
-        "A6" => (10500, 14800),
-        "B4" => (25000, 35300),
-        "B5" => (17600, 25000),
-        "LETTER" => (21590, 27940),
-        "LEGAL" => (21590, 35560),
-        "EXECUTIVE" => (18415, 26670),
-        "TABLOID" => (27940, 43180),
-        "FOLIO" => (21590, 33020),
-        _ => return None,
-    };
-    Some(size)
+    crate::media::dimensions(paper)
 }
 
 /// Encode a `media-size-supported` collection (IPP collection syntax).

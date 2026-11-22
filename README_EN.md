@@ -24,7 +24,7 @@ Supported systems: **Windows 7+, macOS 10.15+, Ubuntu / Debian / UOS / Deepin**.
   - Linux/macOS: CUPS backend + `lpadmin` queue.
 - **Automatic updates** — checks GitHub at startup and every few hours; a yellow marker next to the version at the bottom opens a download-and-install prompt.
 - **Host activity log** — records device connections and print jobs with timestamps, device names and LAN/cloud markers.
-- **Host-matching print features** — client queues use IPP Everywhere (driverless on macOS/Linux, Microsoft IPP Class Driver on Windows), so the system print dialog exposes the host printer's duplex, colour, tray and finishing options. Windows asks for administrator approval once per printer; its class driver keeps a short paper list of its own. A basic queue is added if approval is declined.
+- **Host-matching print features** — client queues use IPP Everywhere (driverless on macOS/Linux, Microsoft IPP Class Driver on Windows). lanPrint writes the host printer's real paper sizes, trays and duplex modes into the generated Windows queue files, so the system print dialog (including Word) offers the same options as the host. Windows asks for administrator approval once per printer when the queue is created or refreshed. A basic queue is added if approval is declined.
 - **PDF print pipeline** — the client renders jobs to PDF; the host rasterises each page and prints it through the real printer driver, with no PDF reader dependency.
 - **Per-printer print settings** — paper sizes, trays, duplex, booklet, colour and copies are read from the host printer and adjustable in the in-app “Print settings” dialog; the host clamps every job to the printer's real capabilities.
 - **Scanning** — WIA on Windows, SANE/`scanimage` on Linux and macOS.

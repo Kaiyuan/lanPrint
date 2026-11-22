@@ -6,7 +6,7 @@
 
 **打印**
 - 客户端任务改用 PDF 管线；Windows 主机通过 WinRT 渲染 PDF，并用真实打印机驱动输出，支持双面、小册子、纸张、进纸盒、彩色、份数和分辨率。
-- 客户端队列优先使用 IPP Everywhere：macOS/Linux 创建驱动无关队列，Windows 使用 Microsoft IPP 类驱动，系统打印对话框会显示真实的双面、彩色、纸盒和装订选项。Windows 会在创建队列时通过提升后的辅助进程请求一次管理员权限；IPP 类驱动只提供较短的纸张列表，拒绝权限时会安装基础队列。
+- 客户端队列优先使用 IPP Everywhere：macOS/Linux 创建驱动无关队列，Windows 使用 Microsoft IPP 类驱动。lanPrint 会把主机打印机的真实纸张、纸盒和双面模式写入 Windows 生成的队列文件，因此系统打印对话框（包括 Word）会显示与主机一致的选项。Windows 会在创建或更新队列时通过提升后的辅助进程请求一次管理员权限；拒绝权限时会安装基础队列。
 - 已有的 TCP 队列会在下次手动启动或打开设置时批量修复为 IPP 队列（Windows 只弹一次权限提示），以刷新系统打印能力。
 - 新增每台打印机的“打印设置”对话框，主机按打印机真实能力裁剪任务参数。
 - 本地打印队列按“设备名-打印机名”命名。
@@ -29,7 +29,7 @@
 
 **Printing**
 - Client jobs now use a PDF pipeline; Windows hosts render PDFs through WinRT and print with the real driver, including duplex, booklet, paper, trays, colour, copies and resolution.
-- Client queues prefer IPP Everywhere: macOS/Linux get a driverless queue and Windows uses the Microsoft IPP Class Driver, so the system print dialog exposes the real duplex, colour, tray and finishing options. Windows asks for administrator approval once through an elevated helper when the queue is created; its class driver keeps a short paper list, and a basic queue is installed if approval is declined.
+- Client queues prefer IPP Everywhere: macOS/Linux get a driverless queue and Windows uses the Microsoft IPP Class Driver. lanPrint writes the host printer's real paper sizes, trays and duplex modes into the generated Windows queue files, so the system print dialog (including Word) offers the same options as the host. Windows asks for administrator approval once through an elevated helper when the queue is created or refreshed; a basic queue is installed if approval is declined.
 - Existing TCP queues are repaired to IPP queues on the next manual launch or when Settings opens (one Windows elevation prompt for all of them), refreshing their system capabilities.
 - Added per-printer print settings; the host clamps each job to the printer's actual capabilities.
 - Local queues are named after the device and printer.

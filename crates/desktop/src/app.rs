@@ -129,17 +129,25 @@ impl App {
             }
             let name = printer.local_name.clone();
             let id = printer.id;
-            let needs =
-                tokio::task::spawn_blocking(move || platform::queue_needs_upgrade(&name, id))
-                    .await
-                    .unwrap_or(false);
+            let capabilities = printer.capabilities.clone();
+            let check_caps = capabilities.clone();
+            let needs = tokio::task::spawn_blocking(move || {
+                platform::queue_needs_upgrade(&name, id, &check_caps)
+            })
+            .await
+            .unwrap_or(false);
             if !needs {
                 if let Ok(mut done) = upgraded_queues().lock() {
                     done.insert(id);
                 }
                 continue;
             }
-            pending.push((printer.local_name, id, printer.preferences));
+            pending.push((
+                printer.local_name,
+                id,
+                printer.preferences,
+                capabilities,
+            ));
         }
         if pending.is_empty() {
             return;
@@ -937,6 +945,7 @@ impl App {
                     tcp_port,
                     &uri,
                     &prefs,
+                    &capabilities,
                 )
             })
             .await

@@ -9,6 +9,8 @@ use crate::error::Result;
 #[cfg(windows)]
 mod windows;
 #[cfg(windows)]
+mod windows_caps;
+#[cfg(windows)]
 mod windows_pdf;
 #[cfg(windows)]
 use windows as imp;
@@ -49,9 +51,11 @@ pub fn print_document(
     imp::print_document(printer, data, content_type, filename, prefs)
 }
 
-/// Install a client-side virtual queue. On Windows `uri` and `prefs` are
-/// ignored because the queue connects to a local TCP listener instead. On
-/// Unix the CUPS backend consumes the `lanprint://` URI directly.
+/// Install a client-side virtual queue. On Windows the queue connects to the
+/// local IPP endpoint; on Unix the CUPS backend consumes the `lanprint://` URI
+/// directly. `capabilities` lets Windows inject the host's media, tray and
+/// duplex options into the generated queue files.
+#[allow(clippy::too_many_arguments)]
 pub fn install_remote_printer(
     local_name: &str,
     display_name: &str,
@@ -60,14 +64,24 @@ pub fn install_remote_printer(
     tcp_port: u16,
     uri: &str,
     prefs: &PrinterPreferences,
+    capabilities: &lanprint_core::PrinterCapabilities,
 ) -> Result<()> {
     #[cfg(windows)]
     {
         let _ = uri;
-        imp::install_remote_printer(local_name, display_name, driver, id, tcp_port, prefs)
+        imp::install_remote_printer(
+            local_name,
+            display_name,
+            driver,
+            id,
+            tcp_port,
+            prefs,
+            capabilities,
+        )
     }
     #[cfg(unix)]
     {
+        let _ = capabilities;
         imp::install_remote_printer(local_name, display_name, driver, id, tcp_port, uri, prefs)
     }
 }
@@ -84,10 +98,18 @@ pub fn launch_update(path: &Path) -> Result<()> {
 /// Move existing client queues to the local IPP endpoint. Windows batches them
 /// into one elevated helper run so the user is asked for administrator rights
 /// at most once.
-pub fn upgrade_ipp_queues(printers: &[(String, u32, PrinterPreferences)]) -> Result<()> {
+#[allow(clippy::type_complexity)]
+pub fn upgrade_ipp_queues(
+    printers: &[(
+        String,
+        u32,
+        PrinterPreferences,
+        lanprint_core::PrinterCapabilities,
+    )],
+) -> Result<()> {
     #[cfg(unix)]
     {
-        for (local_name, id, _) in printers {
+        for (local_name, id, _, _) in printers {
             imp::upgrade_ipp_queue(local_name, *id)?;
         }
         Ok(())
@@ -98,16 +120,22 @@ pub fn upgrade_ipp_queues(printers: &[(String, u32, PrinterPreferences)]) -> Res
     }
 }
 
-/// Whether an existing queue is still on the pre-IPP code path.
-pub fn queue_needs_upgrade(local_name: &str, id: u32) -> bool {
+/// Whether an existing queue is still on the pre-IPP code path or has not had
+/// the current host capabilities injected yet.
+pub fn queue_needs_upgrade(
+    local_name: &str,
+    id: u32,
+    capabilities: &lanprint_core::PrinterCapabilities,
+) -> bool {
     #[cfg(unix)]
     {
+        let _ = capabilities;
         imp::queue_needs_upgrade(local_name, id)
     }
     #[cfg(windows)]
     {
         let _ = id;
-        imp::queue_needs_upgrade(local_name)
+        imp::queue_needs_upgrade(local_name, capabilities)
     }
 }
 

@@ -10,6 +10,7 @@ mod cups;
 mod error;
 mod forwarder;
 mod ipp;
+mod media;
 mod platform;
 mod runtime;
 mod testpage;
